@@ -1,0 +1,229 @@
+[CardsManager] ------------------------------------------------------------------------------------------
+[CardsManager] Creating All Cards CompositeUnlockPack
+[CardsManager] 
+[CardsManager] Adding ModularUnlockPack - Christmas Special Card (83496670)
+[CardsManager] Sets:
+[CardsManager] 1: KitchenData.UnlockSetFixed
+[CardsManager] Christmas Rush (-361249036)
+[CardsManager] Filters:
+[CardsManager] 1: KitchenData.FilterBasic
+[CardsManager] IgnoreUnlockability = True
+[CardsManager] IgnoreFranchiseTier = True
+[CardsManager] IgnoreDuplicateFilter = False
+[CardsManager] IgnoreRequirements = True
+[CardsManager] AllowBaseDishes = False
+[CardsManager] Sorters:
+[CardsManager] Conditions:
+[CardsManager] ConditionalOptions 1
+[CardsManager] Selector = KitchenData.UnlockSelectorForcedCard
+[CardsManager] Always returns first option in list of cards after sorting.
+[CardsManager] Condition = KitchenData.UnlockConditionOnce
+[CardsManager] Day = 0
+[CardsManager] 
+[CardsManager] Adding ModularUnlockPack - January Cards (1091353668)
+[CardsManager] Sets:
+[CardsManager] 1: KitchenData.UnlockSetAutomatic
+[CardsManager] Uses all registered cards in the game (including Modded Cards).
+[CardsManager] Filters:
+[CardsManager] 1: KitchenData.FilterBasic
+[CardsManager] IgnoreUnlockability = False
+[CardsManager] IgnoreFranchiseTier = False
+[CardsManager] IgnoreDuplicateFilter = False
+[CardsManager] IgnoreRequirements = False
+[CardsManager] AllowBaseDishes = True
+[CardsManager] Sorters:
+[CardsManager] 1: KitchenData.UnlockSorterShuffle
+[CardsManager] Shuffles card randomly using UnityEngine.Random.value.
+[CardsManager] 2: KitchenData.UnlockSorterPriority
+[CardsManager] PriorityProbability = 0.5
+[CardsManager] PrioritiseRequirements = False
+[CardsManager] Groups = { Special }
+[CardsManager] DishTypes = { Main, Extra }
+[CardsManager] 3: KitchenData.UnlockSorterEncourageCard
+[CardsManager] IgnoreUnlockability = 0.25
+[CardsManager] Cards = { Dumplings (367917843), Mandarin Starter (1696424557), Bamboo (-1742801708), Stir Fry (-1653221873) }
+[CardsManager] Conditions:
+[CardsManager] ConditionalOptions 1
+[CardsManager] Selector = KitchenData.UnlockSelectorGroupChoice
+[CardsManager] Group1 = Dish
+[CardsManager] Group2 = Dish
+[CardsManager] Condition = KitchenData.UnlockConditionRegular
+[CardsManager] DayInterval = 3
+[CardsManager] DayOffset = 0
+[CardsManager] DayMin = 1
+[CardsManager] DayMax = -1
+[CardsManager] TierRequired = -1
+[CardsManager] 
+[CardsManager] Adding ModularUnlockPack - Autumn Dish Cards (-320463696)
+[CardsManager] Sets:
+[CardsManager] 1: KitchenData.UnlockSetAutomatic
+[CardsManager] Uses all registered cards in the game (including Modded Cards).
+[CardsManager] Filters:
+[CardsManager] 1: KitchenData.FilterBasic
+[CardsManager] IgnoreUnlockability = False
+[CardsManager] IgnoreFranchiseTier = False
+[CardsManager] IgnoreDuplicateFilter = False
+[CardsManager] IgnoreRequirements = False
+[CardsManager] AllowBaseDishes = True
+[CardsManager] Sorters:
+[CardsManager] 1: KitchenData.UnlockSorterShuffle
+[CardsManager] Shuffles card randomly using UnityEngine.Random.value.
+[CardsManager] 2: KitchenData.UnlockSorterPriority
+[CardsManager] PriorityProbability = 0.5
+[CardsManager] PrioritiseRequirements = False
+[CardsManager] Groups = { Special }
+[CardsManager] DishTypes = { Main, Extra }
+[CardsManager] 3: KitchenData.UnlockSorterEncourageCard
+[CardsManager] IgnoreUnlockability = 0.25
+[CardsManager] Cards = { Turkey (1551533879), Nut Roast (536093200) }
+[CardsManager] Conditions:
+[CardsManager] ConditionalOptions 1
+[CardsManager] Selector = KitchenData.UnlockSelectorGroupChoice
+[CardsManager] Group1 = Dish
+[CardsManager] Group2 = Dish
+[CardsManager] Condition = KitchenData.UnlockConditionRegular
+[CardsManager] DayInterval = 3
+[CardsManager] DayOffset = 0
+[CardsManager] DayMin = 1
+[CardsManager] DayMax = -1
+[CardsManager] TierRequired = -1
+[CardsManager] 
+[CardsManager] Adding ModularUnlockPack - Autumn Special Card (-1306979157)
+[CardsManager] Sets:
+[CardsManager] 1: KitchenData.UnlockSetFixed
+[CardsManager] Community (319209671)
+[CardsManager] Filters:
+[CardsManager] 1: KitchenData.FilterBasic
+[CardsManager] IgnoreUnlockability = True
+[CardsManager] IgnoreFranchiseTier = True
+[CardsManager] IgnoreDuplicateFilter = False
+[CardsManager] IgnoreRequirements = True
+[CardsManager] AllowBaseDishes = False
+[CardsManager] Sorters:
+[CardsManager] Conditions:
+[CardsManager] ConditionalOptions 1
+[CardsManager] Selector = KitchenData.UnlockSelectorForcedCard
+[CardsManager] Always returns first option in list of cards after sorting.
+[CardsManager] Condition = KitchenData.UnlockConditionOnce
+[CardsManager] Day = 0
+[CardsManager] 
+[CardsManager] Adding ModularUnlockPack - Franchise Cards Pack (1355831133)
+[CardsManager] Sets:
+[CardsManager] 1: KitchenData.UnlockSetAutomatic
+[CardsManager] Uses all registered cards in the game (including Modded Cards).
+[CardsManager] Filters:
+[CardsManager] 1: KitchenData.FilterBasic
+[CardsManager] IgnoreUnlockability = False
+[CardsManager] IgnoreFranchiseTier = False
+[CardsManager] IgnoreDuplicateFilter = False
+[CardsManager] IgnoreRequirements = False
+[CardsManager] AllowBaseDishes = False
+[CardsManager] Sorters:
+[CardsManager] 1: KitchenData.UnlockSorterShuffle
+[CardsManager] Shuffles card randomly using UnityEngine.Random.value.
+[CardsManager] 2: KitchenData.UnlockSorterPriority
+[CardsManager] PriorityProbability = 0.5
+[CardsManager] PrioritiseRequirements = True
+[CardsManager] Groups = { Special }
+[CardsManager] DishTypes = { Main, Extra }
+[CardsManager] Conditions:
+[CardsManager] ConditionalOptions 1
+[CardsManager] Selector = KitchenData.UnlockSelectorGroupChoice
+[CardsManager] Group1 = FranchiseCard
+[CardsManager] Group2 = FranchiseCard
+[CardsManager] Condition = KitchenData.UnlockConditionOnce
+[CardsManager] Day = 15
+[CardsManager] 
+[CardsManager] Adding ModularUnlockPack - Halloween Cards (-2066335466)
+[CardsManager] Sets:
+[CardsManager] 1: KitchenData.UnlockSetAutomatic
+[CardsManager] Uses all registered cards in the game (including Modded Cards).
+[CardsManager] Filters:
+[CardsManager] 1: KitchenData.FilterBasic
+[CardsManager] IgnoreUnlockability = False
+[CardsManager] IgnoreFranchiseTier = False
+[CardsManager] IgnoreDuplicateFilter = False
+[CardsManager] IgnoreRequirements = False
+[CardsManager] AllowBaseDishes = False
+[CardsManager] Sorters:
+[CardsManager] 1: KitchenData.UnlockSorterShuffle
+[CardsManager] Shuffles card randomly using UnityEngine.Random.value.
+[CardsManager] 2: KitchenData.UnlockSorterPriority
+[CardsManager] PriorityProbability = 0.5
+[CardsManager] PrioritiseRequirements = False
+[CardsManager] Groups = { Special }
+[CardsManager] DishTypes = { Main, Extra }
+[CardsManager] Conditions:
+[CardsManager] ConditionalOptions 1
+[CardsManager] Selector = KitchenData.UnlockSelectorGroupChoice
+[CardsManager] Group1 = Special
+[CardsManager] Group2 = Generic
+[CardsManager] Condition = KitchenData.UnlockConditionRegular
+[CardsManager] DayInterval = 3
+[CardsManager] DayOffset = 0
+[CardsManager] DayMin = 1
+[CardsManager] DayMax = -1
+[CardsManager] TierRequired = -1
+[CardsManager] 
+[CardsManager] Adding ModularUnlockPack - Normal Cards Pack (1659224512)
+[CardsManager] Sets:
+[CardsManager] 1: KitchenData.UnlockSetAutomatic
+[CardsManager] Uses all registered cards in the game (including Modded Cards).
+[CardsManager] Filters:
+[CardsManager] 1: KitchenData.FilterBasic
+[CardsManager] IgnoreUnlockability = False
+[CardsManager] IgnoreFranchiseTier = False
+[CardsManager] IgnoreDuplicateFilter = False
+[CardsManager] IgnoreRequirements = False
+[CardsManager] AllowBaseDishes = False
+[CardsManager] Sorters:
+[CardsManager] 1: KitchenData.UnlockSorterShuffle
+[CardsManager] Shuffles card randomly using UnityEngine.Random.value.
+[CardsManager] 2: KitchenData.UnlockSorterPriority
+[CardsManager] PriorityProbability = 0.5
+[CardsManager] PrioritiseRequirements = True
+[CardsManager] Groups = { Special }
+[CardsManager] DishTypes = { Main, Extra }
+[CardsManager] Conditions:
+[CardsManager] ConditionalOptions 1
+[CardsManager] Selector = KitchenData.UnlockSelectorGroupChoice
+[CardsManager] Group1 = Generic
+[CardsManager] Group2 = Dish
+[CardsManager] Condition = KitchenData.UnlockConditionRegular
+[CardsManager] DayInterval = 3
+[CardsManager] DayOffset = 0
+[CardsManager] DayMin = 1
+[CardsManager] DayMax = -1
+[CardsManager] TierRequired = -1
+[CardsManager] 
+[CardsManager] Adding ModularUnlockPack - Theme Cards Pack (786043106)
+[CardsManager] Sets:
+[CardsManager] 1: KitchenData.UnlockSetAutomatic
+[CardsManager] Uses all registered cards in the game (including Modded Cards).
+[CardsManager] Filters:
+[CardsManager] 1: KitchenData.FilterBasic
+[CardsManager] IgnoreUnlockability = False
+[CardsManager] IgnoreFranchiseTier = False
+[CardsManager] IgnoreDuplicateFilter = False
+[CardsManager] IgnoreRequirements = False
+[CardsManager] AllowBaseDishes = False
+[CardsManager] Sorters:
+[CardsManager] 1: KitchenData.UnlockSorterShuffle
+[CardsManager] Shuffles card randomly using UnityEngine.Random.value.
+[CardsManager] 2: KitchenData.UnlockSorterPriority
+[CardsManager] PriorityProbability = 0.5
+[CardsManager] PrioritiseRequirements = True
+[CardsManager] Groups = { Special }
+[CardsManager] DishTypes = { Main, Extra }
+[CardsManager] Conditions:
+[CardsManager] ConditionalOptions 1
+[CardsManager] Selector = KitchenData.UnlockSelectorGroupChoice
+[CardsManager] Group1 = PrimaryTheme
+[CardsManager] Group2 = PrimaryTheme
+[CardsManager] Condition = KitchenData.UnlockConditionGuarantee
+[CardsManager] MinDay = 5
+[CardsManager] MinTier = -1
+[CardsManager] GuaranteedGroup = PrimaryTheme
+[CardsManager] 
+[CardsManager] Completed Pack. Number of modular packs = 8
+[CardsManager] ------------------------------------------------------------------------------------------

@@ -1,0 +1,5 @@
+Unlock cards now
+DelegateUnlockSystem
+
+Add a system to disable reset to vanilla after a run?
+Or maybe even tie the setting to that run only.
