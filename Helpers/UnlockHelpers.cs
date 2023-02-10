@@ -44,6 +44,14 @@ namespace KitchenCardsManager.Helpers
         internal static bool IsRequirementsMet(int id)
         {
             Unlock unlock = GetAllUnlocksEnumerable().Where(x => x.ID == id).First();
+            if (!unlock.IsUnlockable)
+            {
+                return false;
+            }
+            if (unlock.UnlockGroup == UnlockGroup.FranchiseCard)
+            {
+                return false;
+            }
             if (GameInfo.AllCurrentCards.Intersect(unlock.Requires).Count() != unlock.Requires.Count())
             {
                 return false;
