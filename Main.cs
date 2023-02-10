@@ -45,8 +45,6 @@ namespace KitchenCardsManager
         protected override void Initialise()
         {
             base.Initialise();
-            RegisterPreferences();
-            SetupKLPreferencesMenu();
             UpdateMode(PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID).Value);
         }
 
@@ -56,6 +54,8 @@ namespace KitchenCardsManager
             LogWarning($"{MOD_GUID} v{MOD_VERSION} in use!");
             AddGameDataObject<CardsManagerModularUnlockPack>();
             AddGameDataObject<CardsManagerCompositeUnlockPack>();
+            RegisterPreferences();
+            SetupKLPreferencesMenu();
         }
 
         protected override void OnUpdate()
