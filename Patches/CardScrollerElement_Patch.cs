@@ -734,6 +734,7 @@ namespace KitchenCardsManager.Patches
                 else if (state.SecondaryAction1 == ButtonState.Released || IsAnimationCleanUp)
                 {
                     PerformedReady = false;
+                    IsAnimationCleanUp = false;
                     ReadyHeldTime = 0f;
                     _pages[_selectedPageIndex].Redraw();
                     __result = true;

@@ -10,6 +10,7 @@ using System.Reflection;
 using UnityEngine;
 using System.Collections.Generic;
 using KitchenCardsManager.Patches;
+using KitchenMods;
 
 // Namespace should have "Kitchen" in the beginning
 namespace KitchenCardsManager
@@ -44,13 +45,17 @@ namespace KitchenCardsManager
         protected override void Initialise()
         {
             base.Initialise();
+            RegisterPreferences();
+            SetupKLPreferencesMenu();
+            UpdateMode(PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID).Value);
+        }
+
+        protected override void OnPostActivate(Mod mod)
+        {
             // For log file output so the official plateup support staff can identify if/which a mod is being used
             LogWarning($"{MOD_GUID} v{MOD_VERSION} in use!");
             AddGameDataObject<CardsManagerModularUnlockPack>();
             AddGameDataObject<CardsManagerCompositeUnlockPack>();
-            RegisterPreferences();
-            SetupKLPreferencesMenu();
-            UpdateMode(PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID).Value);
         }
 
         protected override void OnUpdate()
