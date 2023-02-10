@@ -41,6 +41,20 @@ namespace KitchenCardsManager.Helpers
             return GetAllUnlocksEnumerable().Select(x => x.ID).Contains(id);
         }
 
+        internal static bool IsRequirementsMet(int id)
+        {
+            Unlock unlock = GetAllUnlocksEnumerable().Where(x => x.ID == id).First();
+            if (GameInfo.AllCurrentCards.Intersect(unlock.Requires).Count() != unlock.Requires.Count())
+            {
+                return false;
+            }
+            if (GameInfo.AllCurrentCards.Intersect(unlock.BlockedBy).Count() > 0)
+            {
+                return false;
+            }
+            return true;
+        }
+
         internal static IEnumerable<Unlock> GetAllUnmoddedUnlocksEnumerable()
         {
             return GetAllUnlocksEnumerable().Where(x => !IsModded(x.ID));

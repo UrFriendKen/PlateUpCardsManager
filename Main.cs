@@ -9,6 +9,7 @@ using System;
 using System.Reflection;
 using UnityEngine;
 using System.Collections.Generic;
+using KitchenCardsManager.Patches;
 
 // Namespace should have "Kitchen" in the beginning
 namespace KitchenCardsManager
@@ -219,6 +220,7 @@ namespace KitchenCardsManager
 
             public override void Setup(int player_id)
             {
+                CardScrollerElement_Patch.MenuOpenedFromModPreferences = true;
                 CardScrollerElement cardScrollerElement = ModuleDirectory.Add<CardScrollerElement>(Container, new Vector2(0f, 0f));
                 cardScrollerElement.SetCardList(GameInfo.AllCurrentCards);
                 ModuleList.AddModule(cardScrollerElement, cardScrollerElement.transform.localPosition.ToFlat());

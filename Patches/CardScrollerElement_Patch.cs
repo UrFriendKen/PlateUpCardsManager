@@ -96,6 +96,9 @@ namespace KitchenCardsManager.Patches
             private Vector3 KeyHeldPopOffsetVector;
             private readonly Vector3 KEY_HELD_POP_OFFSET_VECTOR_DEFAULT = new Vector3(0.0f, 0.4f, 0.0f);
 
+            private Vector3 SpecialActionAnimationEndVector;
+            private readonly Vector3 SPECIAL_ACTION_ANIMATION_END_VECTOR_DEFAULT = new Vector3(0.0f, 15f, 0.0f);
+
             private Vector3 RadiusVector;
 
             private Vector3 StackingZOffset;
@@ -186,7 +189,8 @@ namespace KitchenCardsManager.Patches
                 Vector3? centreCardRestingLocalPosition = null,
                 Vector3? rowOffsetVector = null,
                 Vector3? selectedCardPopOffsetVector = null,
-                Vector3? grabHeldPopOffsetVector = null)
+                Vector3? keyHeldPopOffsetVector = null,
+                Vector3? specialActionAnimationEndVector = null)
             {
                 CardsManagerContainer = cardsManagerContainer;
                 MainCard = mainCard;
@@ -204,7 +208,8 @@ namespace KitchenCardsManager.Patches
                 CentreCardRestingLocalPosition = centreCardRestingLocalPosition.HasValue ? centreCardRestingLocalPosition.Value : CENTRE_CARD_RESTING_LOCAL_POSITION_DEFAULT;
                 RowOffsetVector = rowOffsetVector.HasValue ? rowOffsetVector.Value : ROW_OFFSET_VECTOR_DEFAULT;
                 SelectedCardPopOffsetVector = selectedCardPopOffsetVector.HasValue ? selectedCardPopOffsetVector.Value : SELECTED_CARD_POP_OFFSET_VECTOR_DEFAULT;
-                KeyHeldPopOffsetVector = grabHeldPopOffsetVector.HasValue ? grabHeldPopOffsetVector.Value : KEY_HELD_POP_OFFSET_VECTOR_DEFAULT;
+                KeyHeldPopOffsetVector = keyHeldPopOffsetVector.HasValue ? keyHeldPopOffsetVector.Value : KEY_HELD_POP_OFFSET_VECTOR_DEFAULT;
+                SpecialActionAnimationEndVector = specialActionAnimationEndVector.HasValue ? specialActionAnimationEndVector.Value : SPECIAL_ACTION_ANIMATION_END_VECTOR_DEFAULT;
 
                 Init();
             }
@@ -354,7 +359,11 @@ namespace KitchenCardsManager.Patches
                     if (i == SelectedIndex)
                     {
                         unlockCardElement.transform.localPosition += SelectedCardPopOffsetVector;
-                        if (IsGrabDown)
+                        if (IsPerformingAnimation)
+                        {
+                            unlockCardElement.transform.localPosition += KeyHeldPopOffsetVector + (SpecialActionAnimationEndVector * AnimationProgress);
+                        }
+                        else if (IsGrabDown)
                         {
                             unlockCardElement.transform.localPosition += KeyHeldPopOffsetVector * GrabHeldTime / GrabHeldThreshold;
                         }
@@ -439,6 +448,8 @@ namespace KitchenCardsManager.Patches
             }
         }
 
+        internal static bool MenuOpenedFromModPreferences = false;
+
         private static List<CardScrollerPage> _pages = new List<CardScrollerPage>();
         private static int _selectedPageIndex = 0;
 
@@ -463,6 +474,13 @@ namespace KitchenCardsManager.Patches
         private static bool PerformedReady = false;
         private static readonly float ReadyHeldThreshold = 3f;
         internal static bool IsReadyDown { get => ReadyHeldTime > 0f; }
+
+        internal static float AnimationProgress { get => AnimationCurrentTime / AnimationTotalTime; }
+        private static float AnimationTotalTime = 0.5f;
+        private static float AnimationCurrentTime = 0f;
+        internal static bool IsPerformingAnimation { get; private set; }
+        internal static bool IsAnimationDone { get => AnimationProgress > 1f; }
+        private static bool IsAnimationCleanUp = false;
 
         [HarmonyPatch(typeof(CardScrollerElement), "SetIndex")]
         [HarmonyPrefix]
@@ -491,7 +509,7 @@ namespace KitchenCardsManager.Patches
             if (!IsCardManagerMode)
             {
                 InitPages(__instance);
-                if (GameInfo.AllCurrentCards.Count == 0)
+                if (GameInfo.AllCurrentCards.Count == 0 || MenuOpenedFromModPreferences)
                 {
                     IsCardManagerMode = true;
                 }
@@ -502,7 +520,8 @@ namespace KitchenCardsManager.Patches
                     ActiveCards_DisplayTweak(__instance, ___Index, ___CardViewOffsetChange);
                 }
             }
-            
+            MenuOpenedFromModPreferences = false;
+
             if (IsCardManagerMode)
             {
                 for (int i = 0; i < _pages.Count; i++)
@@ -632,6 +651,24 @@ namespace KitchenCardsManager.Patches
                 }
             }
 
+            if (IsPerformingAnimation)
+            {
+                if (IsAnimationDone)
+                {
+                    AnimationCurrentTime = 0f;
+                    IsPerformingAnimation = false;
+                    IsAnimationCleanUp = true;
+                }
+                else
+                {
+                    AnimationCurrentTime += Time.deltaTime;
+                    isSelectLocked = true;
+                    _pages[_selectedPageIndex].Redraw();
+                    __result = true;
+                    return false;
+                }
+            }
+
             if (state.IsCancellingMenu == true || state.SecondaryAction2 == ButtonState.Pressed)
             {
                 if (isSelectLocked)
@@ -694,23 +731,25 @@ namespace KitchenCardsManager.Patches
                     _pages[_selectedPageIndex].Redraw();
                     __result = true;
                 }
-
-                else if (!PerformedReady && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed))
+                else if (state.SecondaryAction1 == ButtonState.Released || IsAnimationCleanUp)
+                {
+                    PerformedReady = false;
+                    ReadyHeldTime = 0f;
+                    _pages[_selectedPageIndex].Redraw();
+                    __result = true;
+                }
+                else if (!PerformedReady && CardsManagerController.IsInKitchen
+                    && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed)
+                    && CardsManagerController.CanBeAddedToRun(_pages[_selectedPageIndex].SelectedUnlock.ID))
                 {
                     ReadyHeldTime += Time.deltaTime;
                     if (ReadyHeldTime > ReadyHeldThreshold)
                     {
                         Main.LogInfo("Adding Card to Current Unlocks");
                         AddSelectedCardToRun();
+                        IsPerformingAnimation = true;
                         PerformedReady = true;
                     }
-                    __result = true;
-                }
-                else if (state.SecondaryAction1 == ButtonState.Released)
-                {
-                    PerformedReady = false;
-                    ReadyHeldTime = 0f;
-                    _pages[_selectedPageIndex].Redraw();
                     __result = true;
                 }
 
@@ -720,7 +759,6 @@ namespace KitchenCardsManager.Patches
                     __result = true;
                     return false;
                 }
-
                 else if (state.MenuLeft == ButtonState.Pressed)
                 {
                     mSetIndex.Invoke(__instance, new object[] { _pages[_selectedPageIndex].SelectPreviousCard() });

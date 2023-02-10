@@ -8,8 +8,9 @@ namespace KitchenCardsManager
 {
     internal class CardsManagerController : GameSystemBase
     {
-        internal static SceneType CurrentScene { get => GameInfo.CurrentScene; }
+        internal static bool IsInKitchen { get => GameInfo.CurrentScene == SceneType.Kitchen; }
 
+        internal static SceneType CurrentScene { get => GameInfo.CurrentScene; }
         internal static HashSet<int> CurrentUnlockIDs { get => GameInfo.AllCurrentCards.Select(x => x.CardID).ToHashSet(); }
 
         protected static Queue<int> UnlocksToAdd = new Queue<int>();
@@ -47,6 +48,19 @@ namespace KitchenCardsManager
                 return false;
             }
             UnlocksToAdd.Enqueue(unlockID);
+            return true;
+        }
+
+        internal static bool CanBeAddedToRun(int unlockID)
+        {
+            if (CurrentUnlockIDs.Contains(unlockID) || UnlocksToAdd.Contains(unlockID))
+            {
+                return false;
+            }
+            if (!UnlockHelpers.IsRequirementsMet(unlockID))
+            {
+                return false;
+            }
             return true;
         }
     }
