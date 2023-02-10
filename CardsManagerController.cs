@@ -36,6 +36,7 @@ namespace KitchenCardsManager
                 ID = unlockID,
                 FromFranchise = true
             });
+            Set<CSkipShowingRecipe>(entity);
             Set<CProgressionOption.Selected>(entity);
         }
 
