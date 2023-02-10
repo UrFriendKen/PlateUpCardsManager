@@ -35,7 +35,7 @@ namespace KitchenCardsManager
             Set(entity, new CProgressionOption()
             {
                 ID = unlockID,
-                FromFranchise = true
+                FromFranchise = false
             });
             Set<CSkipShowingRecipe>(entity);
             Set<CProgressionOption.Selected>(entity);
