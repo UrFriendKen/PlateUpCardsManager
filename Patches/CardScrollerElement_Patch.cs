@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
-using static Controllers.InputLock;
 
 namespace KitchenCardsManager.Patches
 {
@@ -380,6 +379,11 @@ namespace KitchenCardsManager.Patches
                 return newColor;
             }
 
+            internal void AddSelectedCardToRun()
+            {
+                CardsManagerController.AddProgressionUnlock(SelectedUnlock.ID);
+            }
+
             private static bool SetPreference(Unlock unlock, bool enabled)
             {
                 PreferenceUtils.Get<KitchenLib.BoolPreference>(Main.MOD_GUID, unlock.ID.ToString()).Value = enabled;
@@ -435,6 +439,12 @@ namespace KitchenCardsManager.Patches
         private static float GrabHeldTime = 0f;
         private static bool PerformedGrab = false;
         private static readonly float GrabHeldThreshold = 1.5f;
+        private static float GrabAnimationProgress = 0f;
+
+        private static float ReadyHeldTime = 0f;
+        private static bool PerformedReady = false;
+        private static readonly float ReadyHeldThreshold = 3f;
+        private static float ReadyAnimationProgress = 0f;
 
         [HarmonyPatch(typeof(CardScrollerElement), "SetIndex")]
         [HarmonyPrefix]
@@ -526,8 +536,6 @@ namespace KitchenCardsManager.Patches
                 ScrollersContainer.transform.localEulerAngles = _scrollersContainerRotation;
                 _pages.Clear();
 
-                //Loop and create pages based on registered list? To create registration flow
-
                 // Non-modded unlocks page
                 CardScrollerPage page = new CardScrollerPage(
                     ScrollersContainer,
@@ -566,13 +574,15 @@ namespace KitchenCardsManager.Patches
                     _pages.Add(page);
                 }
 
-                // Modded unlocks page (Exlluding those registered on custom pages)
-                page = new CardScrollerPage(
-                    ScrollersContainer,
-                    instance.Card,
-                    UnlockHelpers.GetAllModdedUnlocksEnumerable().Where(x => !registeredUnlockIDs.Contains(x.ID)).ToList());
-                _pages.Add(page);
-
+                // Modded unlocks page (Excluding those registered on custom pages, if there are modded unlocks)
+                if (registeredUnlockIDs.Count > 0)
+                {
+                    page = new CardScrollerPage(
+                        ScrollersContainer,
+                        instance.Card,
+                        UnlockHelpers.GetAllModdedUnlocksEnumerable().Where(x => !registeredUnlockIDs.Contains(x.ID)).ToList());
+                    _pages.Add(page);
+                }
                 _selectedPageIndex = 0;
                 _pages[_selectedPageIndex].Enabled = true;
 
@@ -626,7 +636,9 @@ namespace KitchenCardsManager.Patches
                         if (_selectedPageIndex >= _pages.Count)
                         {
                             if (GameInfo.CurrentScene == SceneType.Kitchen)
+                            {
                                 IsCardManagerMode = false;
+                            }
                             _selectedPageIndex = 0;
                         }
                     }
@@ -656,6 +668,7 @@ namespace KitchenCardsManager.Patches
                 {
                     if (!PerformedGrab && GrabHeldTime > 0f)
                     {
+                        Main.LogInfo("Toggling Card");
                         ToggleCard(__instance.Card);
                     }
                     PerformedGrab = false;
@@ -663,12 +676,24 @@ namespace KitchenCardsManager.Patches
                     __result = true;
                 }
 
-                else if (state.SecondaryAction1 == ButtonState.Pressed)
+                if (!PerformedReady && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed))
                 {
-                    // Change Profile?
-                    
+                    ReadyHeldTime += Time.deltaTime;
+                    if (ReadyHeldTime > ReadyHeldThreshold)
+                    {
+                        Main.LogInfo("Adding Card to Current Unlocks");
+                        AddSelectedCardToRun();
+                        PerformedReady = true;
+                    }
                     __result = true;
                 }
+                else if (state.SecondaryAction1 == ButtonState.Released)
+                {
+                    PerformedReady = false;
+                    ReadyHeldTime = 0f;
+                    __result = true;
+                }
+
                 else if (state.MenuLeft == ButtonState.Pressed)
                 {
                     mSetIndex.Invoke(__instance, new object[] { _pages[_selectedPageIndex].SelectPreviousCard() });
@@ -715,6 +740,11 @@ namespace KitchenCardsManager.Patches
             {
                 UnlockHelpers.SetColor(mainCardDisplay, newColor);
             }
+        }
+
+        private static void AddSelectedCardToRun()
+        {
+            _pages[_selectedPageIndex].AddSelectedCardToRun();
         }
     }
 }

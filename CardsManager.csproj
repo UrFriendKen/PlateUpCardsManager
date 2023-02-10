@@ -7,7 +7,7 @@
     <ProjectGuid>{F9086435-4BC0-48AC-B0EE-E2A345DE53C4}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CardsManager</RootNamespace>
+    <RootNamespace>KitchenCardsManager</RootNamespace>
     <AssemblyName>CardsManager</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -123,6 +123,7 @@
     <Compile Include="CardsManagerCompositeUnlockPack.cs" />
     <Compile Include="CardsManagerModularUnlockPack.cs" />
     <Compile Include="CardsManagerUtil.cs" />
+    <Compile Include="CardsManagerController.cs" />
     <Compile Include="EnableAllUnlockPacks.cs" />
     <Compile Include="Helpers\UnlockHelpers.cs" />
     <Compile Include="Main.cs" />

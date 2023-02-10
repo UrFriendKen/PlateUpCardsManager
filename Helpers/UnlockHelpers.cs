@@ -36,6 +36,11 @@ namespace KitchenCardsManager.Helpers
             return dict.Values.OrderByDescending(x => x.Count).SelectMany(x => x);
         }
 
+        internal static bool IsValidUnlock (int id)
+        {
+            return GetAllUnlocksEnumerable().Select(x => x.ID).Contains(id);
+        }
+
         internal static IEnumerable<Unlock> GetAllUnmoddedUnlocksEnumerable()
         {
             return GetAllUnlocksEnumerable().Where(x => !IsModded(x.ID));
