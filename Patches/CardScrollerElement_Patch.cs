@@ -738,7 +738,7 @@ namespace KitchenCardsManager.Patches
                     _pages[_selectedPageIndex].Redraw();
                     __result = true;
                 }
-                else if (!PerformedReady && CardsManagerController.IsInKitchen
+                else if (NetworkHelper.IsHost() && !PerformedReady && CardsManagerController.IsInKitchen
                     && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed)
                     && CardsManagerController.CanBeAddedToRun(_pages[_selectedPageIndex].SelectedUnlock.ID))
                 {

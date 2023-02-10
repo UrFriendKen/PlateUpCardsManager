@@ -125,6 +125,7 @@
     <Compile Include="CardsManagerUtil.cs" />
     <Compile Include="CardsManagerController.cs" />
     <Compile Include="EnableAllUnlockPacks.cs" />
+    <Compile Include="Helpers\NetworkHelper.cs" />
     <Compile Include="Helpers\UnlockHelpers.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Patches\CardScrollerElement_Patch.cs" />
