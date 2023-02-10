@@ -93,8 +93,8 @@ namespace KitchenCardsManager.Patches
             private Vector3 SelectedCardPopOffsetVector; // Vector applied to selected card in scroller to make it pop
             private readonly Vector3 SELECTED_CARD_POP_OFFSET_VECTOR_DEFAULT = new Vector3(0.0f, 0.6f, 0.0f);
 
-            private Vector3 GrabHeldPopOffsetVector;
-            private readonly Vector3 GRAB_HELD_POP_OFFSET_VECTOR_DEFAULT = new Vector3(0.0f, 1f, 0.0f);
+            private Vector3 KeyHeldPopOffsetVector;
+            private readonly Vector3 KEY_HELD_POP_OFFSET_VECTOR_DEFAULT = new Vector3(0.0f, 0.4f, 0.0f);
 
             private Vector3 RadiusVector;
 
@@ -204,7 +204,7 @@ namespace KitchenCardsManager.Patches
                 CentreCardRestingLocalPosition = centreCardRestingLocalPosition.HasValue ? centreCardRestingLocalPosition.Value : CENTRE_CARD_RESTING_LOCAL_POSITION_DEFAULT;
                 RowOffsetVector = rowOffsetVector.HasValue ? rowOffsetVector.Value : ROW_OFFSET_VECTOR_DEFAULT;
                 SelectedCardPopOffsetVector = selectedCardPopOffsetVector.HasValue ? selectedCardPopOffsetVector.Value : SELECTED_CARD_POP_OFFSET_VECTOR_DEFAULT;
-                GrabHeldPopOffsetVector = grabHeldPopOffsetVector.HasValue ? grabHeldPopOffsetVector.Value : GRAB_HELD_POP_OFFSET_VECTOR_DEFAULT;
+                KeyHeldPopOffsetVector = grabHeldPopOffsetVector.HasValue ? grabHeldPopOffsetVector.Value : KEY_HELD_POP_OFFSET_VECTOR_DEFAULT;
 
                 Init();
             }
@@ -351,7 +351,19 @@ namespace KitchenCardsManager.Patches
                         (i - RowsSelectedIndex[row]) * StackingZOffset;
 
                     // Pop up selected card pop further if grab held
-                    unlockCardElement.transform.localPosition += (i == SelectedIndex) ? (IsGrabOrReadyDown? GrabHeldPopOffsetVector : SelectedCardPopOffsetVector) : Vector3.zero; 
+                    if (i == SelectedIndex)
+                    {
+                        unlockCardElement.transform.localPosition += SelectedCardPopOffsetVector;
+                        if (IsGrabDown)
+                        {
+                            unlockCardElement.transform.localPosition += KeyHeldPopOffsetVector * GrabHeldTime / GrabHeldThreshold;
+                        }
+                        else if (IsReadyDown)
+                        {
+                            unlockCardElement.transform.localPosition += KeyHeldPopOffsetVector * ReadyHeldTime / ReadyHeldThreshold;
+                        }
+                    }
+
                     unlockCardElement.transform.localEulerAngles = new Vector3(0.0f, 0.0f, (RowsSelectedIndex[row] - i) * AngularPitch - rowOffset * RowAngularPitchOffset);
 
                     UnlockHelpers.SetColor(unlockCardElement, GetColorByEnabledState(Cards[i]));
@@ -445,12 +457,12 @@ namespace KitchenCardsManager.Patches
         private static float GrabHeldTime = 0f;
         private static bool PerformedGrab = false;
         private static readonly float GrabHeldThreshold = 1.5f;
+        internal static bool IsGrabDown { get => GrabHeldTime > 0f; }
 
         private static float ReadyHeldTime = 0f;
         private static bool PerformedReady = false;
         private static readonly float ReadyHeldThreshold = 3f;
-        private static float ReadyAnimationProgress = 0f;
-        internal static bool IsGrabOrReadyDown { get => (GrabHeldTime > 0f || ReadyHeldTime > 0f); }
+        internal static bool IsReadyDown { get => ReadyHeldTime > 0f; }
 
         [HarmonyPatch(typeof(CardScrollerElement), "SetIndex")]
         [HarmonyPrefix]
@@ -668,7 +680,6 @@ namespace KitchenCardsManager.Patches
                         ToggleRow(__instance.Card);
                         PerformedGrab = true;
                     }
-                    _pages[_selectedPageIndex].Redraw();
                     __result = true;
                 }
                 else if (state.GrabAction == ButtonState.Released)
@@ -684,7 +695,7 @@ namespace KitchenCardsManager.Patches
                     __result = true;
                 }
 
-                if (!PerformedReady && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed))
+                else if (!PerformedReady && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed))
                 {
                     ReadyHeldTime += Time.deltaTime;
                     if (ReadyHeldTime > ReadyHeldThreshold)
@@ -693,7 +704,6 @@ namespace KitchenCardsManager.Patches
                         AddSelectedCardToRun();
                         PerformedReady = true;
                     }
-                    _pages[_selectedPageIndex].Redraw();
                     __result = true;
                 }
                 else if (state.SecondaryAction1 == ButtonState.Released)
@@ -702,6 +712,13 @@ namespace KitchenCardsManager.Patches
                     ReadyHeldTime = 0f;
                     _pages[_selectedPageIndex].Redraw();
                     __result = true;
+                }
+
+                if (GrabHeldTime > 0f || ReadyHeldTime > 0f)
+                {
+                    _pages[_selectedPageIndex].Redraw();
+                    __result = true;
+                    return false;
                 }
 
                 else if (state.MenuLeft == ButtonState.Pressed)
