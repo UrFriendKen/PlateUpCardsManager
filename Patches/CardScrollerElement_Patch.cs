@@ -6,6 +6,7 @@ using KitchenCardsManager.Helpers;
 using KitchenData;
 using KitchenLib.Utils;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
@@ -574,6 +575,7 @@ namespace KitchenCardsManager.Patches
                 _pages.Clear();
 
                 // Non-modded unlocks page
+                Main.LogInfo($"Adding unmodded cards page.");
                 CardScrollerPage page = new CardScrollerPage(
                     ScrollersContainer,
                     instance.Card,
@@ -582,6 +584,7 @@ namespace KitchenCardsManager.Patches
 
                 HashSet<int> registeredUnlockIDs = new HashSet<int>();
 
+                Main.LogInfo($"Adding registered modded cards page.");
                 foreach (CardsManagerUtil.UnlockPageData unlockPageData in CardsManagerUtil.GetRegisteredPages())
                 {
                     List<int> keys = new List<int>();
@@ -611,14 +614,22 @@ namespace KitchenCardsManager.Patches
                     _pages.Add(page);
                 }
 
+                List<Unlock> nonregisteredModdedUnlocks = UnlockHelpers.GetAllModdedUnlocksEnumerable().Where(x => !registeredUnlockIDs.Contains(x.ID)).ToList();
+                Main.LogInfo($"Registered {registeredUnlockIDs.Count} modded card(s) to mod author-defined pages.");
+                Main.LogInfo($"{nonregisteredModdedUnlocks.Count} modded card(s) not registered.");
                 // Modded unlocks page (Excluding those registered on custom pages, if there are modded unlocks)
-                if (registeredUnlockIDs.Count > 0)
+                if (nonregisteredModdedUnlocks.Count > 0)
                 {
+                    Main.LogInfo("Added to unsorted modded cards page.");
                     page = new CardScrollerPage(
                         ScrollersContainer,
                         instance.Card,
-                        UnlockHelpers.GetAllModdedUnlocksEnumerable().Where(x => !registeredUnlockIDs.Contains(x.ID)).ToList());
+                        nonregisteredModdedUnlocks);
                     _pages.Add(page);
+                }
+                else
+                {
+                    Main.LogInfo("Skipping unsorted modded cards page.");
                 }
                 _selectedPageIndex = 0;
                 _pages[_selectedPageIndex].Enabled = true;

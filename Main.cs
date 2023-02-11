@@ -22,7 +22,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.1.0";
+        private const string MOD_VERSION = "1.1.1";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -46,6 +46,8 @@ namespace KitchenCardsManager
         {
             base.Initialise();
             UpdateMode(PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID).Value);
+            RegisterPreferences();
+            SetupKLPreferencesMenu();
         }
 
         protected override void OnPostActivate(Mod mod)
@@ -54,8 +56,6 @@ namespace KitchenCardsManager
             LogWarning($"{MOD_GUID} v{MOD_VERSION} in use!");
             AddGameDataObject<CardsManagerModularUnlockPack>();
             AddGameDataObject<CardsManagerCompositeUnlockPack>();
-            RegisterPreferences();
-            SetupKLPreferencesMenu();
         }
 
         protected override void OnUpdate()
@@ -89,7 +89,7 @@ namespace KitchenCardsManager
         private static void RegisterPreferences()
         {
             PreferenceUtils.Register<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID, "Mode");
-            PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID).Value = 0;
+            PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID).Value = 1;
             PreferenceUtils.Register<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_RESET_MODE_PREFERENCE_ID, "ResetMode");
             PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_RESET_MODE_PREFERENCE_ID).Value = 0;
 
