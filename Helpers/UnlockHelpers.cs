@@ -41,28 +41,6 @@ namespace KitchenCardsManager.Helpers
             return GetAllUnlocksEnumerable().Select(x => x.ID).Contains(id);
         }
 
-        internal static bool IsRequirementsMet(int id)
-        {
-            Unlock unlock = GetAllUnlocksEnumerable().Where(x => x.ID == id).First();
-            if (!unlock.IsUnlockable)
-            {
-                return false;
-            }
-            if (unlock.UnlockGroup == UnlockGroup.FranchiseCard)
-            {
-                return false;
-            }
-            if (GameInfo.AllCurrentCards.Intersect(unlock.Requires).Count() != unlock.Requires.Count())
-            {
-                return false;
-            }
-            if (GameInfo.AllCurrentCards.Intersect(unlock.BlockedBy).Count() > 0)
-            {
-                return false;
-            }
-            return true;
-        }
-
         internal static IEnumerable<Unlock> GetAllUnmoddedUnlocksEnumerable()
         {
             return GetAllUnlocksEnumerable().Where(x => !IsModded(x.ID));
@@ -71,18 +49,6 @@ namespace KitchenCardsManager.Helpers
         internal static IEnumerable<Unlock> GetAllModdedUnlocksEnumerable()
         {
             return GetAllUnlocksEnumerable().Where(x => IsModded(x.ID));
-            //Dictionary<string, List<Unlock>> unlocksByModName = new Dictionary<string, List<Unlock>>();
-
-            //foreach (Unlock unlock in GetAllUnlocksEnumerable().Where(x => IsModded(x.ID)))
-            //{
-            //    string modName = CustomGDO.GDOs[unlock.ID].ModName;
-            //    if (!unlocksByModName.ContainsKey(modName))
-            //    {
-            //        unlocksByModName.Add(modName, new List<Unlock>());
-            //    }
-            //    unlocksByModName[modName].Add(unlock);
-            //}
-            //return unlocksByModName.Values.OrderByDescending(x => x.Count).SelectMany(x => x);
         }
 
         internal static string GetCardGroup(Unlock unlock)

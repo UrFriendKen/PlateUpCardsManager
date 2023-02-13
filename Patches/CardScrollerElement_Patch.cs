@@ -6,10 +6,11 @@ using KitchenCardsManager.Helpers;
 using KitchenData;
 using KitchenLib.Utils;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace KitchenCardsManager.Patches
 {
@@ -407,9 +408,9 @@ namespace KitchenCardsManager.Patches
                 return newColor;
             }
 
-            internal void AddSelectedCardToRun()
+            internal bool AddSelectedCardToRun(out string statusMessage)
             {
-                CardsManagerController.AddProgressionUnlock(SelectedUnlock.ID);
+                return CardsManagerController.AddProgressionUnlock(SelectedUnlock.ID, out statusMessage);
             }
 
             private static bool SetPreference(Unlock unlock, bool enabled)
@@ -455,7 +456,6 @@ namespace KitchenCardsManager.Patches
         private static int _selectedPageIndex = 0;
 
         private static GameObject ScrollersContainer;
-
         private static bool IsCardManagerMode = false;
 
         private static bool _init = false;
@@ -751,21 +751,27 @@ namespace KitchenCardsManager.Patches
                     __result = true;
                 }
                 else if (NetworkHelper.IsHost() && !PerformedReady && CardsManagerController.IsInKitchen
-                    && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed)
-                    && CardsManagerController.CanBeAddedToRun(_pages[_selectedPageIndex].SelectedUnlock.ID))
+                    && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed))
                 {
-                    ReadyHeldTime += Time.deltaTime;
-                    if (ReadyHeldTime > ReadyHeldThreshold)
+                    if (CardsManagerController.CanBeAddedToRun(_pages[_selectedPageIndex].SelectedUnlock.ID, out string statusMessage))
                     {
-                        Main.LogInfo("Adding Card to Current Unlocks");
-                        AddSelectedCardToRun();
-                        IsPerformingAnimation = true;
+                        ReadyHeldTime += Time.deltaTime;
+                        if (ReadyHeldTime > ReadyHeldThreshold)
+                        {
+                            AddSelectedCardToRun(out string s);
+                            Main.LogInfo(s);
+                            IsPerformingAnimation = true;
+                            PerformedReady = true;
+                        }
+                    }
+                    else
+                    {
+                        Main.LogInfo(statusMessage);
                         PerformedReady = true;
                     }
-                    __result = true;
                 }
 
-                if (GrabHeldTime > 0f || ReadyHeldTime > 0f)
+                if (GrabHeldTime > 0f || ReadyHeldTime > 0f || PerformedReady)
                 {
                     _pages[_selectedPageIndex].Redraw();
                     __result = true;
@@ -819,9 +825,9 @@ namespace KitchenCardsManager.Patches
             }
         }
 
-        private static void AddSelectedCardToRun()
+        private static void AddSelectedCardToRun(out string statusMessage)
         {
-            _pages[_selectedPageIndex].AddSelectedCardToRun();
+            _pages[_selectedPageIndex].AddSelectedCardToRun(out statusMessage);
         }
     }
 }
