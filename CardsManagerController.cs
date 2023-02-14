@@ -9,13 +9,6 @@ namespace KitchenCardsManager
 {
     internal class CardsManagerController : GameSystemBase
     {
-        internal enum CardAddStatus
-        {
-            Success,
-            AlreadyObtained,
-            RequirementsNotMet
-        }
-
         internal static bool IsInKitchen { get => GameInfo.CurrentScene == SceneType.Kitchen; }
 
         internal static SceneType CurrentScene { get => GameInfo.CurrentScene; }
@@ -43,7 +36,7 @@ namespace KitchenCardsManager
             Set(entity, new CProgressionOption()
             {
                 ID = unlockID,
-                FromFranchise = false
+                FromFranchise = UnlockHelpers.IsFranchiseCard(unlockID)
             });
             Set<CSkipShowingRecipe>(entity);
             Set<CProgressionOption.Selected>(entity);
@@ -71,13 +64,14 @@ namespace KitchenCardsManager
             if (CurrentUnlockIDs.Contains(unlockID) || UnlocksToAdd.Contains(unlockID))
             {
                 statusMessage = $"{unlock.Name} already added!";
+                return false;
             }
             if (!unlock.IsUnlockable)
             {
                 statusMessage = $"{unlock.Name} is not unlockable!";
                 return false;
             }
-            if (unlock.UnlockGroup == UnlockGroup.FranchiseCard)
+            if (unlock.CardType == CardType.FranchiseTier)
             {
                 statusMessage = $"You can only get {unlock.Name} by franchising!";
                 return false;

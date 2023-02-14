@@ -77,5 +77,10 @@ namespace KitchenCardsManager.Helpers
         {
             return card.Card.material.GetColor(Shader.PropertyToID("_Title"));
         }
+
+        internal static bool IsFranchiseCard(int unlockID)
+        {
+            return GetAllUnlocksEnumerable().Where(x => x.ID == unlockID).First().CardType == CardType.FranchiseTier;
+        }
     }
 }

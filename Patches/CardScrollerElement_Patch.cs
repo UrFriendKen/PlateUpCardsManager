@@ -8,9 +8,7 @@ using KitchenLib.Utils;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace KitchenCardsManager.Patches
 {
@@ -367,7 +365,7 @@ namespace KitchenCardsManager.Patches
                         }
                         else if (IsGrabDown)
                         {
-                            unlockCardElement.transform.localPosition += KeyHeldPopOffsetVector * GrabHeldTime / GrabHeldThreshold;
+                            unlockCardElement.transform.localPosition -= SelectedCardPopOffsetVector * GrabHeldTime / GrabHeldThreshold;
                         }
                         else if (IsReadyDown)
                         {
@@ -481,7 +479,13 @@ namespace KitchenCardsManager.Patches
         private static float AnimationCurrentTime = 0f;
         internal static bool IsPerformingAnimation { get; private set; }
         internal static bool IsAnimationDone { get => AnimationProgress > 1f; }
-        private static bool IsAnimationCleanUp = false;
+
+        private static bool IsScrolling = false;
+        private static float scrollHeldTime = 0f;
+        private const float scrollContinuousLowerThreshold = 0.5f;
+        private const float scrollSpeedMax = 5f;
+        private static float scrollTickProgress = 0f;
+        private const float minScrollDelay = 0.05f;
 
         [HarmonyPatch(typeof(CardScrollerElement), "SetIndex")]
         [HarmonyPrefix]
@@ -649,16 +653,133 @@ namespace KitchenCardsManager.Patches
             legendDisplay.transform.localRotation = Quaternion.identity;
         }
 
+        private enum ToggleType
+        {
+            None,
+            Single,
+            Row
+        }
+
         [HarmonyPatch(typeof(CardScrollerElement), "HandleInteraction")]
         [HarmonyPrefix]
         private static bool HandleInteraction(ref bool __result, CardScrollerElement __instance, ref int ___Index, InputState state)
         {
-            bool isSelectLocked = false;
+            if (!IsScrolling)
+            {
+                scrollHeldTime = 0f;
+                scrollTickProgress = 0f;
+            }
+            IsScrolling = false;
+
+            if (HandleToggleCard(state, out ToggleType toggleType))
+            {
+                switch (toggleType)
+                {
+                    case ToggleType.Single:
+                        ToggleCard(__instance.Card);
+                        _pages[_selectedPageIndex].Redraw();
+                        break;
+                    case ToggleType.Row:
+                        ToggleRow(__instance.Card);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            if (HandleAddCard(state))
+            {
+                AddSelectedCardToRun(out string s);
+                Main.LogInfo(s);
+            }
+
+            if (HandleAnimation() || GrabHeldTime > 0f || ReadyHeldTime > 0f || PerformedReady)
+            {
+                _pages[_selectedPageIndex].Redraw();
+                __result = true;
+                return false;
+            }
+
+            if (HandlePageChange(state))
+            {
+                mSetIndex.Invoke(__instance, new object[] { IsCardManagerMode ? _pages[_selectedPageIndex].SelectedIndex : ___Index });
+                __result = true;
+                return false;
+            }
+
+            if (!IsCardManagerMode)
+            {
+                return true;
+            }
+
+
+            List<Orientation> scrollDirection = new List<Orientation>();
+            bool isPressed = false;
+
+            if (state.MenuLeft == ButtonState.Pressed || state.MenuLeft == ButtonState.Held)
+            {
+                isPressed = state.MenuLeft == ButtonState.Pressed;
+                scrollDirection.Add(Orientation.Left);
+            }
+            if (state.MenuRight == ButtonState.Pressed || state.MenuRight == ButtonState.Held)
+            {
+                isPressed = state.MenuRight == ButtonState.Pressed;
+                scrollDirection.Add(Orientation.Right);
+            }
+            if (state.MenuUp == ButtonState.Pressed || state.MenuUp == ButtonState.Held)
+            {
+                isPressed = state.MenuUp == ButtonState.Pressed;
+                scrollDirection.Add(Orientation.Up);
+            }
+            if (state.MenuDown == ButtonState.Pressed || state.MenuDown == ButtonState.Held)
+            {
+                isPressed = state.MenuDown == ButtonState.Pressed;
+                scrollDirection.Add(Orientation.Down);
+            }
+
+            if (scrollDirection.Count == 0)
+            {
+                __result = false;
+                return false;
+            }
+            
+            if (scrollDirection.Count == 1)
+            {
+                IsScrolling = true;
+                if (isPressed || (scrollHeldTime > scrollContinuousLowerThreshold && scrollTickProgress > scrollSpeedMax / scrollHeldTime * minScrollDelay))
+                {
+                    switch (scrollDirection.First())
+                    {
+                        case Orientation.Left:
+                            mSetIndex.Invoke(__instance, new object[] { _pages[_selectedPageIndex].SelectPreviousCard() });
+                            break;
+                        case Orientation.Right:
+                            mSetIndex.Invoke(__instance, new object[] { _pages[_selectedPageIndex].SelectNextCard() });
+                            break;
+                        case Orientation.Up:
+                            mSetIndex.Invoke(__instance, new object[] { _pages[_selectedPageIndex].SelectNextRow() });
+                            break;
+                        case Orientation.Down:
+                            mSetIndex.Invoke(__instance, new object[] { _pages[_selectedPageIndex].SelectPreviousRow() });
+                            break;
+                    }
+                    scrollTickProgress = 0f;
+                }
+                scrollTickProgress += Time.deltaTime;
+                scrollHeldTime = Mathf.Clamp(scrollHeldTime + Time.deltaTime, 0, scrollSpeedMax);
+            }
+            __result = true;
+            return false;
+        }
+
+        private static bool HandleAnimation()
+        {
+            bool animationUpdate = false;
             for (int i = _pages.Count - 1; i > -1; i--)
             {
                 if (_pages[i].RowToggleStep())
                 {
-                    isSelectLocked = true;
+                    animationUpdate = true;
                 }
             }
 
@@ -666,148 +787,114 @@ namespace KitchenCardsManager.Patches
             {
                 if (IsAnimationDone)
                 {
+                    ReadyHeldTime = 0f;
                     AnimationCurrentTime = 0f;
                     IsPerformingAnimation = false;
-                    IsAnimationCleanUp = true;
+                    _pages[_selectedPageIndex].Redraw();
                 }
                 else
                 {
                     AnimationCurrentTime += Time.deltaTime;
-                    isSelectLocked = true;
+                    animationUpdate = true;
                     _pages[_selectedPageIndex].Redraw();
-                    __result = true;
-                    return false;
                 }
             }
+            return animationUpdate;
+        }
 
-            if (state.IsCancellingMenu == true || state.SecondaryAction2 == ButtonState.Pressed)
+        private static bool HandlePageChange(InputState state)
+        {
+            bool changePage = false;
+            if (state.InteractAction == ButtonState.Pressed)
             {
-                if (isSelectLocked)
-                {
-                    __result = true;
-                    return false;
-                }
-                return true;
-            }
-            else if (state.InteractAction == ButtonState.Pressed)
-            {
-                if (!isSelectLocked)
-                {
-                    if (GameInfo.CurrentScene != SceneType.Kitchen)
-                        IsCardManagerMode = true;
+                if (GameInfo.CurrentScene != SceneType.Kitchen)
+                    IsCardManagerMode = true;
 
-                    if (IsCardManagerMode)
+                if (IsCardManagerMode)
+                {
+                    _selectedPageIndex++;
+                    if (_selectedPageIndex >= _pages.Count)
                     {
-                        _selectedPageIndex++;
-                        if (_selectedPageIndex >= _pages.Count)
+                        if (GameInfo.CurrentScene == SceneType.Kitchen)
                         {
-                            if (GameInfo.CurrentScene == SceneType.Kitchen)
-                            {
-                                IsCardManagerMode = false;
-                            }
-                            _selectedPageIndex = 0;
+                            IsCardManagerMode = false;
                         }
+                        _selectedPageIndex = 0;
                     }
-                    else
-                    {
-                        IsCardManagerMode = true;
-                    }
-                    mSetIndex.Invoke(__instance, new object[] { IsCardManagerMode ? _pages[_selectedPageIndex].SelectedIndex : ___Index });
                 }
-                __result = true;
-                return false;
+                else
+                {
+                    IsCardManagerMode = true;
+                }
+                changePage = true;
             }
-            else if (IsCardManagerMode)
+            return changePage;
+        }
+
+        private static bool HandleToggleCard(InputState state, out ToggleType toggleType)
+        {
+            toggleType = ToggleType.None;
+            if (IsCardManagerMode && ReadyHeldTime == 0f)
             {
                 if (!PerformedGrab && (state.GrabAction == ButtonState.Held || state.GrabAction == ButtonState.Pressed))
                 {
                     GrabHeldTime += Time.deltaTime;
                     if (GrabHeldTime > GrabHeldThreshold)
                     {
-                        Main.LogInfo("Toggling Row");
-                        ToggleRow(__instance.Card);
+                        toggleType = ToggleType.Row;
                         PerformedGrab = true;
                     }
-                    __result = true;
+                    return true;
                 }
                 else if (state.GrabAction == ButtonState.Released)
                 {
                     if (!PerformedGrab && GrabHeldTime > 0f)
                     {
-                        Main.LogInfo("Toggling Card");
-                        ToggleCard(__instance.Card);
+                        toggleType = ToggleType.Single;
                     }
                     PerformedGrab = false;
                     GrabHeldTime = 0f;
                     _pages[_selectedPageIndex].Redraw();
-                    __result = true;
+                    return true;
                 }
-                else if (state.SecondaryAction1 == ButtonState.Released || IsAnimationCleanUp)
-                {
-                    PerformedReady = false;
-                    IsAnimationCleanUp = false;
-                    ReadyHeldTime = 0f;
-                    _pages[_selectedPageIndex].Redraw();
-                    __result = true;
-                }
-                else if (NetworkHelper.IsHost() && !PerformedReady && CardsManagerController.IsInKitchen
-                    && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed))
-                {
-                    if (CardsManagerController.CanBeAddedToRun(_pages[_selectedPageIndex].SelectedUnlock.ID, out string statusMessage))
-                    {
-                        ReadyHeldTime += Time.deltaTime;
-                        if (ReadyHeldTime > ReadyHeldThreshold)
-                        {
-                            AddSelectedCardToRun(out string s);
-                            Main.LogInfo(s);
-                            IsPerformingAnimation = true;
-                            PerformedReady = true;
-                        }
-                    }
-                    else
-                    {
-                        Main.LogInfo(statusMessage);
-                        PerformedReady = true;
-                    }
-                }
-
-                if (GrabHeldTime > 0f || ReadyHeldTime > 0f || PerformedReady)
-                {
-                    _pages[_selectedPageIndex].Redraw();
-                    __result = true;
-                    return false;
-                }
-                else if (state.MenuLeft == ButtonState.Pressed)
-                {
-                    mSetIndex.Invoke(__instance, new object[] { _pages[_selectedPageIndex].SelectPreviousCard() });
-                    __result = true;
-                }
-                else if (state.MenuRight == ButtonState.Pressed)
-                {
-                    mSetIndex.Invoke(__instance, new object[] { _pages[_selectedPageIndex].SelectNextCard() });
-                    __result = true;
-                }
-                else if (state.MenuUp == ButtonState.Pressed)
-                {
-                    mSetIndex.Invoke(__instance, new object[] { _pages[_selectedPageIndex].SelectNextRow() });
-                    __result = true;
-                }
-                else if (state.MenuDown == ButtonState.Pressed)
-                {
-                    mSetIndex.Invoke(__instance, new object[] { _pages[_selectedPageIndex].SelectPreviousRow() });
-                    __result = true;
-                }
-                else
-                {
-                    __result = false;
-                }
-                return false;
             }
             else
             {
-                // Run original HandleInteraction
-                return true;
+                PerformedGrab = false;
+                GrabHeldTime = 0f;
             }
+            return false;
+        }
+
+        private static bool HandleAddCard(InputState state)
+        {
+            if (state.SecondaryAction1 == ButtonState.Released)
+            {
+                PerformedReady = false;
+                ReadyHeldTime = 0f;
+                _pages[_selectedPageIndex].Redraw();
+            }
+
+            else if (NetworkHelper.IsHost() && !PerformedReady && CardsManagerController.IsInKitchen
+                && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed))
+            {
+                if (CardsManagerController.CanBeAddedToRun(_pages[_selectedPageIndex].SelectedUnlock.ID, out string statusMessage))
+                {
+                    ReadyHeldTime += Time.deltaTime;
+                    if (ReadyHeldTime > ReadyHeldThreshold)
+                    {
+                        IsPerformingAnimation = true;
+                        PerformedReady = true;
+                        return true;
+                    }
+                }
+                else
+                {
+                    Main.LogInfo(statusMessage);
+                    PerformedReady = true;
+                }
+            }
+            return false;
         }
 
         private static void ToggleRow(UnlockCardElement mainCardDisplay)
