@@ -126,6 +126,7 @@
   <ItemGroup>
     <Compile Include="CardsManagerCompositeUnlockPack.cs" />
     <Compile Include="CardsManagerModularUnlockPack.cs" />
+    <Compile Include="CardsManagerStartingCardController.cs" />
     <Compile Include="CardsManagerUtil.cs" />
     <Compile Include="CardsManagerController.cs" />
     <Compile Include="EnableAllUnlockPacks.cs" />
@@ -133,6 +134,7 @@
     <Compile Include="Helpers\UnlockHelpers.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Patches\CardScrollerElement_Patch.cs" />
+    <Compile Include="Patches\CreateCardSetsFromSetting_Patch.cs" />
     <Compile Include="Patches\UnlockSet_Patch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ResetMode.cs" />
