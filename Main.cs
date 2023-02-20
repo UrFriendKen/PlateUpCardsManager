@@ -22,7 +22,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.1.3";
+        private const string MOD_VERSION = "1.1.4";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -42,10 +42,8 @@ namespace KitchenCardsManager
 
         public Main() : base(MOD_GUID, MOD_NAME, MOD_AUTHOR, MOD_VERSION, MOD_GAMEVERSION, Assembly.GetExecutingAssembly()) { }
 
-        protected override void Initialise()
+        protected override void OnInitialise()
         {
-            base.Initialise();
-
             RegisterPreferences();
             SetupKLPreferencesMenu();
 
