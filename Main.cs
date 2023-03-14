@@ -11,6 +11,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using KitchenCardsManager.Patches;
 using KitchenMods;
+using KitchenCardsManager.Customs;
 
 // Namespace should have "Kitchen" in the beginning
 namespace KitchenCardsManager
@@ -22,7 +23,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.1.4";
+        private const string MOD_VERSION = "1.2.0";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -31,6 +32,8 @@ namespace KitchenCardsManager
 
         internal const string CARDS_MANAGER_MODULAR_UNLOCK_PACK_UNIQUENAMEID = "IcedMilo.PlateUp.CardsManager:CardsManagerModularUnlockPack";
         internal const string CARDS_MANAGER_COMPOSITE_UNLOCK_PACK_UNIQUENAMEID = "IcedMilo.PlateUp.CardsManager:CardsManagerCompositeUnlockPack";
+        internal const string CARDS_MANAGER_TURBO_MODULAR_UNLOCK_PACK_UNIQUENAMEID = "IcedMilo.PlateUp.CardsManager:CardsManagerTurboModularUnlockPack";
+        internal const string CARDS_MANAGER_TURBO_COMPOSITE_UNLOCK_PACK_UNIQUENAMEID = "IcedMilo.PlateUp.CardsManager:CardsManagerTurboCompositeUnlockPack";
 
         internal const string CARDS_MANAGER_MODE_PREFERENCE_ID = "Mode";
         internal const string CARDS_MANAGER_RESET_MODE_PREFERENCE_ID = "ResetMode";
@@ -56,6 +59,8 @@ namespace KitchenCardsManager
             LogWarning($"{MOD_GUID} v{MOD_VERSION} in use!");
             AddGameDataObject<CardsManagerModularUnlockPack>();
             AddGameDataObject<CardsManagerCompositeUnlockPack>();
+            AddGameDataObject<CardsManagerTurboModularUnlockPack>();
+            AddGameDataObject<CardsManagerTurboCompositeUnlockPack>();
         }
 
         protected override void OnUpdate()

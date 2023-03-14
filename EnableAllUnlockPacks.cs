@@ -2,6 +2,7 @@
 using Unity.Entities;
 using KitchenLib.Utils;
 using KitchenData;
+using KitchenCardsManager.Customs;
 using static Kitchen.CreateCardSetsFromSetting;
 
 namespace KitchenCardsManager
@@ -44,10 +45,21 @@ namespace KitchenCardsManager
                 {
                     entity = base.EntityManager.CreateEntity(typeof(SSettingUnlockPack), typeof(CUnlockPack));
                 }
-                Set(entity, new CUnlockPack
+                Entity kitchenLayoutSingleton = GetSingletonEntity<SKitchenLayout>();
+                if (kitchenLayoutSingleton != null && Require<CSetting>(kitchenLayoutSingleton, out CSetting setting) && GameData.Main.Get<RestaurantSetting>(setting.RestaurantSetting).Name == "Turbo")
                 {
-                    ActiveUnlockPack = GDOUtils.GetCustomGameDataObject<CardsManagerCompositeUnlockPack>().ID
-                });
+                    Set(entity, new CUnlockPack
+                    {
+                        ActiveUnlockPack = GDOUtils.GetCustomGameDataObject<CardsManagerTurboCompositeUnlockPack>().ID
+                    });
+                }
+                else
+                {
+                    Set(entity, new CUnlockPack
+                    {
+                        ActiveUnlockPack = GDOUtils.GetCustomGameDataObject<CardsManagerCompositeUnlockPack>().ID
+                    });
+                }
             }
 
             if (!prevWhiteListMode.HasValue || Main.WhitelistModeEnabled != prevWhiteListMode)

@@ -26,6 +26,11 @@ namespace KitchenCardsManager.Helpers
             Dictionary<string, List<Unlock>> dict = new Dictionary<string, List<Unlock>>();
             foreach (Unlock unlock in GameData.Main.Get<Unlock>())
             {
+                if (unlock is null)
+                {
+                    Main.LogInfo("Unlock is null! Skipping");
+                    continue;
+                }
                 string group = GetCardGroup(unlock);
                 if (!dict.ContainsKey(group))
                 {

@@ -124,11 +124,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CardsManagerCompositeUnlockPack.cs" />
-    <Compile Include="CardsManagerModularUnlockPack.cs" />
+    <Compile Include="Customs\CardsManagerCompositeUnlockPack.cs" />
+    <Compile Include="Customs\CardsManagerTurboModularUnlockPack.cs" />
+    <Compile Include="Customs\CardsManagerModularUnlockPack.cs" />
     <Compile Include="CardsManagerStartingCardController.cs" />
     <Compile Include="CardsManagerUtil.cs" />
     <Compile Include="CardsManagerController.cs" />
+    <Compile Include="Customs\CardsManagerTurboCompositeUnlockPack.cs" />
     <Compile Include="EnableAllUnlockPacks.cs" />
     <Compile Include="Helpers\NetworkHelper.cs" />
     <Compile Include="Helpers\UnlockHelpers.cs" />

@@ -4,9 +4,9 @@ using System.Collections.Generic;
 
 namespace KitchenCardsManager
 {
-    internal class CardsManagerModularUnlockPack : CustomModularUnlockPack
+    internal class CardsManagerTurboModularUnlockPack : CustomModularUnlockPack
     {
-        public override string UniqueNameID { get { return Main.CARDS_MANAGER_MODULAR_UNLOCK_PACK_UNIQUENAMEID; } } // Setting the UniqueNameID ( Used to generate GDO ID )
+        public override string UniqueNameID { get { return Main.CARDS_MANAGER_TURBO_MODULAR_UNLOCK_PACK_UNIQUENAMEID; } } // Setting the UniqueNameID ( Used to generate GDO ID )
 
         public override List<IUnlockSet> Sets
         {
@@ -78,7 +78,7 @@ namespace KitchenCardsManager
                         },
                         Condition = new UnlockConditionRegular()
                         {
-                            DayInterval = 3,
+                            DayInterval = 1,
                             DayOffset = 0,
                             DayMin = 1,
                             DayMax = -1,
