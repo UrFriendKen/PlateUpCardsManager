@@ -1,5 +1,5 @@
 ﻿using Kitchen;
-using KitchenLib.Utils;
+using KitchenLib.Preferences;
 
 namespace KitchenCardsManager
 {
@@ -7,7 +7,7 @@ namespace KitchenCardsManager
     {
         protected override void OnUpdate()
         {
-            if (PreferenceUtils.Get<KitchenLib.IntPreference>(Main.MOD_GUID, Main.CARDS_MANAGER_RESET_MODE_PREFERENCE_ID).Value == 1)
+            if (Main.KLPrefManager.GetPreference<PreferenceInt>(Main.CARDS_MANAGER_RESET_MODE_PREFERENCE_ID).Get() == 1)
             {
                 Main.LogInfo("ResetModeOnNewRun Enabled");
                 Main.ResetModeToVanilla();
@@ -20,7 +20,7 @@ namespace KitchenCardsManager
         protected override void OnUpdate()
         {
             Main.LogInfo("ResetModeOnFranchiseEnter Enabled");
-            if (PreferenceUtils.Get<KitchenLib.IntPreference>(Main.MOD_GUID, Main.CARDS_MANAGER_RESET_MODE_PREFERENCE_ID).Value == 2)
+            if (Main.KLPrefManager.GetPreference<PreferenceInt>(Main.CARDS_MANAGER_RESET_MODE_PREFERENCE_ID).Get() == 2)
             {
                 Main.ResetModeToVanilla();
             }

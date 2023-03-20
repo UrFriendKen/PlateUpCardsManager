@@ -4,6 +4,7 @@ using Kitchen;
 using Kitchen.Modules;
 using KitchenCardsManager.Helpers;
 using KitchenData;
+using KitchenLib.Preferences;
 using KitchenLib.Utils;
 using System.Collections.Generic;
 using System.Linq;
@@ -163,7 +164,7 @@ namespace KitchenCardsManager.Patches
             {
                 get
                 {
-                    return PreferenceUtils.Get<KitchenLib.BoolPreference>(Main.MOD_GUID, SelectedUnlock.ID.ToString()).Value;
+                    return Main.KLPrefManager.GetPreference<PreferenceBool>(SelectedUnlock.ID.ToString()).Get();
                 }
             }
 
@@ -413,25 +414,20 @@ namespace KitchenCardsManager.Patches
 
             private static bool SetPreference(Unlock unlock, bool enabled)
             {
-                PreferenceUtils.Get<KitchenLib.BoolPreference>(Main.MOD_GUID, unlock.ID.ToString()).Value = enabled;
-                PreferenceUtils.Save();
+                Main.KLPrefManager.GetPreference<PreferenceBool>(unlock.ID.ToString()).Set(enabled);
+                Main.KLPrefManager.Save();
                 return enabled;
             }
 
             private static bool TogglePreference(Unlock unlock)
             {
-                bool newValue = !PreferenceUtils.Get<KitchenLib.BoolPreference>(Main.MOD_GUID, unlock.ID.ToString()).Value;
+                bool newValue = !Main.KLPrefManager.GetPreference<PreferenceBool>(unlock.ID.ToString()).Get();
                 return SetPreference(unlock, newValue);
-            }
-
-            private static bool GetUnlockEnabledState(Unlock unlock)
-            {
-                return PreferenceUtils.Get<KitchenLib.BoolPreference>(Main.MOD_GUID, unlock.ID.ToString()).Value;
             }
 
             private static Color GetColorByEnabledState(Unlock unlock)
             {
-                return GetUnlockEnabledState(unlock) ? GetDefaultColor(unlock.ID) : DisabledColor;
+                return UnlockHelpers.GetEnabledState(unlock) ? GetDefaultColor(unlock.ID) : DisabledColor;
             }
 
             private static Color GetDefaultColor(int unlockID)

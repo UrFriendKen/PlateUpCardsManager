@@ -1,17 +1,17 @@
 ﻿using Kitchen;
 using Kitchen.Modules;
+using KitchenCardsManager.Customs;
 using KitchenCardsManager.Helpers;
+using KitchenCardsManager.Patches;
 using KitchenData;
 using KitchenLib;
 using KitchenLib.Event;
-using KitchenLib.Utils;
+using KitchenLib.Preferences;
+using KitchenMods;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
-using System.Collections.Generic;
-using KitchenCardsManager.Patches;
-using KitchenMods;
-using KitchenCardsManager.Customs;
 
 // Namespace should have "Kitchen" in the beginning
 namespace KitchenCardsManager
@@ -43,6 +43,8 @@ namespace KitchenCardsManager
 
         private static bool Logged = false;
 
+        internal static PreferenceManager KLPrefManager;
+
         public Main() : base(MOD_GUID, MOD_NAME, MOD_AUTHOR, MOD_VERSION, MOD_GAMEVERSION, Assembly.GetExecutingAssembly()) { }
 
         protected override void OnInitialise()
@@ -50,7 +52,7 @@ namespace KitchenCardsManager
             RegisterPreferences();
             SetupKLPreferencesMenu();
 
-            UpdateMode(PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID).Value);
+            UpdateMode(KLPrefManager.GetPreference<PreferenceInt>(CARDS_MANAGER_MODE_PREFERENCE_ID).Get());
         }
 
         protected override void OnPostActivate(Mod mod)
@@ -93,17 +95,17 @@ namespace KitchenCardsManager
 
         private static void RegisterPreferences()
         {
-            PreferenceUtils.Register<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID, "Mode");
-            PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID).Value = 1;
-            PreferenceUtils.Register<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_RESET_MODE_PREFERENCE_ID, "ResetMode");
-            PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_RESET_MODE_PREFERENCE_ID).Value = 0;
+            KLPrefManager = new PreferenceManager(MOD_GUID);
+
+            KLPrefManager.RegisterPreference<PreferenceInt>(new PreferenceInt(CARDS_MANAGER_MODE_PREFERENCE_ID, 1));
+            KLPrefManager.RegisterPreference<PreferenceInt>(new PreferenceInt(CARDS_MANAGER_RESET_MODE_PREFERENCE_ID, 0));
 
             foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
             {
-                PreferenceUtils.Register<KitchenLib.BoolPreference>(MOD_GUID, unlock.ID.ToString(), unlock.Name);
-                PreferenceUtils.Get<KitchenLib.BoolPreference>(MOD_GUID, unlock.ID.ToString()).Value = unlock.IsUnlockable;
+                // To check if it is a starting card for any restaurant setting. If so, set enabled
+                KLPrefManager.RegisterPreference<PreferenceBool>(new PreferenceBool(unlock.ID.ToString(), unlock.IsUnlockable));
             }
-            PreferenceUtils.Load();
+            KLPrefManager.Load();
         }
 
         private static void SetupKLPreferencesMenu()
@@ -118,9 +120,9 @@ namespace KitchenCardsManager
         internal static void ResetModeToVanilla()
         {
             LogInfo("Resetting mode to Vanilla");
-            PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID).Value = 0;
-            PreferenceUtils.Save();
-            UpdateMode(PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, CARDS_MANAGER_MODE_PREFERENCE_ID).Value);
+            KLPrefManager.GetPreference<PreferenceInt>(CARDS_MANAGER_MODE_PREFERENCE_ID).Set(0);
+            KLPrefManager.Save();
+            UpdateMode(KLPrefManager.GetPreference<PreferenceInt>(CARDS_MANAGER_MODE_PREFERENCE_ID).Get());
         }
 
         private static void UpdateMode(int modeValue)
@@ -162,10 +164,10 @@ namespace KitchenCardsManager
         {
             private static class PreferencesHelper
             {
-                public static void Preference_OnChanged(string preferenceID, int f)
+                public static void Preference_OnChanged(string preferenceID, int i)
                 {
-                    PreferenceUtils.Get<KitchenLib.IntPreference>(Main.MOD_GUID, preferenceID).Value = f;
-                    PreferenceUtils.Save();
+                    Main.KLPrefManager.GetPreference<PreferenceInt>(preferenceID).Set(i);
+                    Main.KLPrefManager.Save();
                 }
             }
 
@@ -187,7 +189,7 @@ namespace KitchenCardsManager
                 AddLabel("Mode");
                 this.Mode = new Option<int>(
                     new List<int>() { 0, 1, 2 },
-                    PreferenceUtils.Get<KitchenLib.IntPreference>(Main.MOD_GUID, Main.CARDS_MANAGER_MODE_PREFERENCE_ID).Value,
+                    Main.KLPrefManager.GetPreference<PreferenceInt>(Main.CARDS_MANAGER_MODE_PREFERENCE_ID).Get(),
                     new List<string>() { "Vanilla", "Blacklist", "Whitelist" });
                 Add<int>(this.Mode).OnChanged += delegate (object _, int f)
                 {
@@ -197,7 +199,7 @@ namespace KitchenCardsManager
 
                 this.ResetMode = new Option<int>(
                     new List<int>() { 0, 1, 2 },
-                    PreferenceUtils.Get<KitchenLib.IntPreference>(Main.MOD_GUID, Main.CARDS_MANAGER_RESET_MODE_PREFERENCE_ID).Value,
+                    Main.KLPrefManager.GetPreference<PreferenceInt>(Main.CARDS_MANAGER_RESET_MODE_PREFERENCE_ID).Get(),
                     new List<string>() { "Never", "When Starting New Run", "When Entering HQ" });
                 AddLabel("Automatically Reset Mode To Vanilla");
                 Add<int>(this.ResetMode).OnChanged += delegate (object _, int f)

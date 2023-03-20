@@ -1,7 +1,7 @@
 ﻿using Kitchen;
 using KitchenData;
 using KitchenLib.Customs;
-using KitchenLib.Utils;
+using KitchenLib.Preferences;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -65,7 +65,7 @@ namespace KitchenCardsManager.Helpers
         {
             try
             {
-                return PreferenceUtils.Get<KitchenLib.BoolPreference>(Main.MOD_GUID, unlock.ID.ToString()).Value;
+                return Main.KLPrefManager.GetPreference<PreferenceBool>(unlock.ID.ToString()).Get();
             }
             catch (NullReferenceException)
             {
