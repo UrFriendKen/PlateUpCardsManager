@@ -103,7 +103,7 @@ namespace KitchenCardsManager
             foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
             {
                 // To check if it is a starting card for any restaurant setting. If so, set enabled
-                KLPrefManager.RegisterPreference<PreferenceBool>(new PreferenceBool(unlock.ID.ToString(), unlock.IsUnlockable));
+                KLPrefManager.RegisterPreference<PreferenceBool>(new PreferenceBool(unlock.ID.ToString(), unlock.IsUnlockable || (unlock.CardType == CardType.Setting && !UnlockHelpers.IsModded(unlock))));
             }
             KLPrefManager.Load();
         }

@@ -33,6 +33,11 @@
 	
 	<!-- Exclude workshop metadata -->
 	<ItemGroup>
+	  <None Remove="CardsManager.xcf" />
+	  <None Remove="CardsManagerCompositeUnlockPack_1.1.3b.txt" />
+	  <None Remove="CardsManagerRipple.gif" />
+	  <None Remove="CardsManagerRipple_Compressed.gif" />
+	  <None Remove="Notes.txt" />
 	  <None Remove="plateup_mod_metadata.json" />
 	  <None Remove="*.png" />
 	</ItemGroup>
