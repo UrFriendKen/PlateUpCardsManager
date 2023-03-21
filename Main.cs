@@ -23,7 +23,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.2.0";
+        private const string MOD_VERSION = "1.3.0";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -102,7 +102,6 @@ namespace KitchenCardsManager
 
             foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
             {
-                // To check if it is a starting card for any restaurant setting. If so, set enabled
                 KLPrefManager.RegisterPreference<PreferenceBool>(new PreferenceBool(unlock.ID.ToString(), unlock.IsUnlockable || (unlock.CardType == CardType.Setting && !UnlockHelpers.IsModded(unlock))));
             }
             KLPrefManager.Load();

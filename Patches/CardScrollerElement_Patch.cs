@@ -683,7 +683,7 @@ namespace KitchenCardsManager.Patches
                 }
             }
 
-            if (HandleAddCard(state))
+            if (HandleAddRemoveCard(state))
             {
                 AddSelectedCardToRun(out string s);
                 Main.LogInfo(s);
@@ -705,6 +705,9 @@ namespace KitchenCardsManager.Patches
 
             if (!IsCardManagerMode)
             {
+
+
+
                 return true;
             }
 
@@ -862,7 +865,7 @@ namespace KitchenCardsManager.Patches
             return false;
         }
 
-        private static bool HandleAddCard(InputState state)
+        private static bool HandleAddRemoveCard(InputState state)
         {
             if (state.SecondaryAction1 == ButtonState.Released)
             {

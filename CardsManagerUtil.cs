@@ -1,9 +1,6 @@
 ﻿using KitchenCardsManager.Helpers;
 using KitchenData;
-using KitchenLib.Customs;
-using KitchenLib.Utils;
 using System.Collections.Generic;
-using static Controllers.InputLock;
 
 namespace KitchenCardsManager
 {
