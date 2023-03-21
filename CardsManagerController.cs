@@ -1,7 +1,9 @@
 ﻿using Kitchen;
 using Kitchen.ShopBuilder;
+using KitchenCardsManager.Customs;
 using KitchenCardsManager.Helpers;
 using KitchenData;
+using KitchenLib.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -199,7 +201,7 @@ namespace KitchenCardsManager
                 {
                     for (int j = 0; j < menuItems.Length; j++)
                     {
-                        if (progression.ID != menuItems[i].SourceDish)
+                        if (dish.ID != menuItems[i].SourceDish)
                             continue;
                         menuItemsIndicesToDestroy.Add(j);
                         break;
@@ -286,25 +288,26 @@ namespace KitchenCardsManager
                 {
                     UndoParameterEffect((ParameterEffect)unlockEffect);
                 }
-
             }
         }
 
         private bool UndoParameterEffect(ParameterEffect effect)
         {
-            if (TryGetSingleton(out SKitchenParameters kitchenParameters))
+            VariableParameterUnlockCard unlockCard = GDOUtils.GetCustomGameDataObject<VariableParameterUnlockCard>() as VariableParameterUnlockCard;
+            unlockCard.UpdateParameterEffect(new KitchenParameters
             {
-                kitchenParameters.Parameters = kitchenParameters.Parameters.Add(new KitchenParameters
-                {
-                    CustomersPerHour = -effect.Parameters.CustomersPerHour,
-                    CustomersPerHourReduction = -effect.Parameters.CustomersPerHourReduction,
-                    MinimumGroupSize = -effect.Parameters.MinimumGroupSize,
-                    MaximumGroupSize = -effect.Parameters.MaximumGroupSize,
-                    CurrentCourses = 0
-                });
-                SetSingleton(kitchenParameters);
-                return true;
-            }
+                CustomersPerHour = -effect.Parameters.CustomersPerHour,
+                CustomersPerHourReduction = -effect.Parameters.CustomersPerHourReduction,
+                MaximumGroupSize = -effect.Parameters.MaximumGroupSize,
+                MinimumGroupSize = -effect.Parameters.MinimumGroupSize,
+                CurrentCourses = -effect.Parameters.CurrentCourses
+            });
+
+            Set(EntityManager.CreateEntity(), new CNewParameterChange
+            {
+                ID = GDOUtils.GetCustomGameDataObject<VariableParameterUnlockCard>().ID,
+                Index = 0
+            });
             return false;
         }
 
@@ -389,7 +392,7 @@ namespace KitchenCardsManager
             {
                 Set(EntityManager.CreateEntity(), new CGrantsShopDiscount
                 {
-                    Amount = effect.ShopCostDecrease
+                    Amount = 1f / (1f - effect.ShopCostDecrease)
                 });
             }
 
@@ -507,9 +510,13 @@ namespace KitchenCardsManager
             return false;
         }
 
-        internal static bool RemoveProgressionUnlock(int unlockID)
+        internal static bool RemoveProgressionUnlock(int unlockID, out string statusMessage)
         {
-            UnlocksToRemove.Enqueue(unlockID);
+            if (CanBeRemovedFromRun(unlockID, out statusMessage))
+            {
+                UnlocksToRemove.Enqueue(unlockID);
+                return true;
+            }
             return true;
         }
 
@@ -556,6 +563,48 @@ namespace KitchenCardsManager
                 return false;
             }
             statusMessage = $"Successfully added {unlock.Name}";
+            return true;
+        }
+
+        internal static bool CanBeRemovedFromRun(int unlockID, out string statusMessage)
+        {
+            HashSet<Type> supportedEffectTypes = new HashSet<Type>
+            {
+                typeof(ParameterEffect),
+                typeof(StatusEffect),
+                typeof(ThemeAddEffect),
+                typeof(ShopEffect),
+                typeof(StartBonusEffect),
+                typeof(EnableGroupEffect),
+                typeof(CustomerSpawnEffect)
+            };
+
+            if (CurrentScene != SceneType.Kitchen)
+            {
+                statusMessage = "You must be in a restaurant to add cards!";
+                return false;
+            }
+            Unlock unlock = UnlockHelpers.GetAllUnlocksEnumerable().Where(x => x.ID == unlockID).First();
+
+            if (!CurrentUnlockIDs.Contains(unlockID) || UnlocksToRemove.Contains(unlockID))
+            {
+                statusMessage = $"{unlock.Name} is not active!";
+                return false;
+            }
+            if (unlock is UnlockCard unlockCard)
+            {
+                IEnumerable<Type> unlockEffectTypes = unlockCard.Effects.Select(x => x.GetType()).Where(type => !supportedEffectTypes.Contains(type));
+                if (unlockEffectTypes.Count() > 0)
+                {
+                    statusMessage = "Contains unsupported effect types!";
+                    foreach (Type type in unlockEffectTypes)
+                    {
+                        statusMessage += $"\n- {type.Name}";
+                    }
+                    return false;
+                }
+            }
+            statusMessage = $"Successfully removed {unlock.Name}";
             return true;
         }
 

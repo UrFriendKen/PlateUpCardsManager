@@ -30,6 +30,7 @@ namespace KitchenCardsManager
         // e.g. ">=1.1.1" current and all future
         // e.g. ">=1.1.1 <=1.2.3" for all from/until
 
+        internal const string CARDS_MANAGER_VARIABLE_PARAMETER_UNLOCK_CARD_UNIQUENAMEID = "IcedMilo.PlateUp.CardsManager:VariableParameterUnlockCard";
         internal const string CARDS_MANAGER_MODULAR_UNLOCK_PACK_UNIQUENAMEID = "IcedMilo.PlateUp.CardsManager:CardsManagerModularUnlockPack";
         internal const string CARDS_MANAGER_COMPOSITE_UNLOCK_PACK_UNIQUENAMEID = "IcedMilo.PlateUp.CardsManager:CardsManagerCompositeUnlockPack";
         internal const string CARDS_MANAGER_TURBO_MODULAR_UNLOCK_PACK_UNIQUENAMEID = "IcedMilo.PlateUp.CardsManager:CardsManagerTurboModularUnlockPack";
@@ -59,6 +60,7 @@ namespace KitchenCardsManager
         {
             // For log file output so the official plateup support staff can identify if/which a mod is being used
             LogWarning($"{MOD_GUID} v{MOD_VERSION} in use!");
+            AddGameDataObject<VariableParameterUnlockCard>();
             AddGameDataObject<CardsManagerModularUnlockPack>();
             AddGameDataObject<CardsManagerCompositeUnlockPack>();
             AddGameDataObject<CardsManagerTurboModularUnlockPack>();

@@ -9,6 +9,8 @@ using KitchenLib.Utils;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Unity.Collections;
 using UnityEngine;
 
 namespace KitchenCardsManager.Patches
@@ -81,7 +83,7 @@ namespace KitchenCardsManager.Patches
 
             private Vector3 ScrollerContainerLocalPosition;
             private readonly Vector3 SCROLLER_CONTAINER_LOCAL_POSITION_DEFAULT = new Vector3(4.54f, 3f, 10f);
-            
+
             private Vector3 ScrollerContainerRotation;
             private readonly Vector3 SCROLLER_CONTAINER_ROTATION_DEFAULT = new Vector3(0f, 0f, 0f);
 
@@ -444,6 +446,61 @@ namespace KitchenCardsManager.Patches
             }
         }
 
+        struct ActiveCardsCache
+        {
+            public int HashCode => GetHashCode();
+
+            List<ICard> _cards = new List<ICard>();
+            public List<ICard> Cards
+            {
+                get
+                {
+                    return _cards;
+                }
+                set
+                {
+                    List<ICard> newCards = new List<ICard>();
+                    for (int i = 0; i < value.Count; i++)
+                    {
+                        newCards.Add(value[i]);
+                    }
+                    _cards = newCards;
+                }
+            }
+
+            public ActiveCardsCache()
+            {
+                Cards = new List<ICard>();
+            }
+
+            public ActiveCardsCache(List<ICard> cards)
+            {
+                Cards = cards;
+            }
+
+            public bool IsChanged(List<ICard> check)
+            {
+                return IsChanged(new ActiveCardsCache(check));
+            }
+
+            public bool IsChanged(ActiveCardsCache check)
+            {
+                return HashCode != check.HashCode;
+            }
+
+            public override int GetHashCode()
+            {
+                int hash = 17;
+
+                foreach (ICard card in _cards)
+                {
+                    hash = hash * 31 + card.GetHashCode();
+                }
+
+                return hash;
+            }
+        }
+
         internal static bool MenuOpenedFromModPreferences = false;
 
         private static List<CardScrollerPage> _pages = new List<CardScrollerPage>();
@@ -470,6 +527,8 @@ namespace KitchenCardsManager.Patches
         private static readonly float ReadyHeldThreshold = 3f;
         internal static bool IsReadyDown { get => ReadyHeldTime > 0f; }
 
+        private static bool HandleInteractionRequireRedraw = false;
+
         internal static float AnimationProgress { get => AnimationCurrentTime / AnimationTotalTime; }
         private static float AnimationTotalTime = 0.5f;
         private static float AnimationCurrentTime = 0f;
@@ -483,9 +542,11 @@ namespace KitchenCardsManager.Patches
         private static float scrollTickProgress = 0f;
         private const float minScrollDelay = 0.05f;
 
+        static ActiveCardsCache Cache = new ActiveCardsCache();
+
         [HarmonyPatch(typeof(CardScrollerElement), "SetIndex")]
         [HarmonyPrefix]
-        private static bool SetIndex_Prefix(CardScrollerElement __instance, int index)
+        private static bool SetIndex_Prefix()
         {
             if (ScrollersContainer == null || ScrollersContainer.transform.parent == null)
             {
@@ -547,7 +608,7 @@ namespace KitchenCardsManager.Patches
             for (int i = 0; i < CardBank.Count; i++)
             {
                 UnlockCardElement unlockCardElement = CardBank[i];
-                unlockCardElement.transform.localPosition = ((i == selectedIndex) ? new Vector3(0.5f, 0f, 0f) : Vector3.zero) + (i - selectedIndex + 5) * (cardViewOffsetChange);
+                unlockCardElement.transform.localPosition = ((i == selectedIndex) ? new Vector3(0.5f, 0f, 0f) : Vector3.zero) * (PerformedReady ? 1f : 1f - ReadyHeldTime / ReadyHeldThreshold) + (i - selectedIndex + 5) * (cardViewOffsetChange);
             }
         }
 
@@ -596,7 +657,7 @@ namespace KitchenCardsManager.Patches
                         List<int> order = unlockPageData.Order[rowKey];
                         List<Unlock> unlocks = kvp.Value;
                         foreach (Unlock unlock in unlocks.OrderBy(x => order[unlocks.IndexOf(x)]))
-                        {                            keys.Add(rowKey);
+                        { keys.Add(rowKey);
                             cards.Add(unlock);
                             if (!registeredUnlockIDs.Contains(unlock.ID))
                             {
@@ -658,8 +719,14 @@ namespace KitchenCardsManager.Patches
 
         [HarmonyPatch(typeof(CardScrollerElement), "HandleInteraction")]
         [HarmonyPrefix]
-        private static bool HandleInteraction(ref bool __result, CardScrollerElement __instance, ref int ___Index, InputState state)
+        private static bool HandleInteraction(ref bool __result, ref CardScrollerElement __instance, ref int ___Index, ref List<ICard> ___Cards, InputState state)
         {
+            if (Cache.IsChanged(new ActiveCardsCache(GameInfo.AllCurrentCards)))
+            {
+                Main.LogInfo("Cache Update");
+                UpdateActiveCardsCardBank(ref __instance, ref ___Index, ref ___Cards);
+            }
+
             if (!IsScrolling)
             {
                 scrollHeldTime = 0f;
@@ -683,31 +750,42 @@ namespace KitchenCardsManager.Patches
                 }
             }
 
-            if (HandleAddRemoveCard(state))
+            if (HandleReadyButtonHold(state, (___Cards.Count > 0 ? ___Cards[___Index] : null)))
             {
-                AddSelectedCardToRun(out string s);
+                string s;
+                if (IsCardManagerMode)
+                {
+                    AddSelectedCardToRun(out s);
+                }
+                else
+                {
+                    RemoveSelectedCardFromRun((___Cards[___Index] as Unlock).ID, out s);
+                }
                 Main.LogInfo(s);
             }
 
             if (HandleAnimation() || GrabHeldTime > 0f || ReadyHeldTime > 0f || PerformedReady)
             {
-                _pages[_selectedPageIndex].Redraw();
+                HandleInteractionRequireRedraw = true;
                 __result = true;
-                return false;
             }
 
             if (HandlePageChange(state))
             {
-                mSetIndex.Invoke(__instance, new object[] { IsCardManagerMode ? _pages[_selectedPageIndex].SelectedIndex : ___Index });
+                HandleInteractionRequireRedraw = true;
                 __result = true;
+                return false;
+            }
+
+            if (HandleInteractionRequireRedraw)
+            {
+                HandleInteractionRequireRedraw = false;
+                mSetIndex.Invoke(__instance, new object[] { IsCardManagerMode ? _pages[_selectedPageIndex].SelectedIndex : ___Index });
                 return false;
             }
 
             if (!IsCardManagerMode)
             {
-
-
-
                 return true;
             }
 
@@ -741,7 +819,7 @@ namespace KitchenCardsManager.Patches
                 __result = false;
                 return false;
             }
-            
+
             if (scrollDirection.Count == 1)
             {
                 IsScrolling = true;
@@ -771,6 +849,22 @@ namespace KitchenCardsManager.Patches
             return false;
         }
 
+        private static void UpdateActiveCardsCardBank(ref CardScrollerElement instance, ref int selectedIndex, ref List<ICard> cards)
+        {
+            Cache.Cards = GameInfo.AllCurrentCards;
+            int index = selectedIndex;
+            for (int i = 0; i < instance.CardBank.Count; i++)
+            {
+                instance.CardBank[i].Destroy();
+            }
+            instance.CardBank.Clear();
+            instance.SetCardList(GameInfo.AllCurrentCards);
+            if (cards.Count == 0)
+                selectedIndex = 0;
+            else
+                selectedIndex = Mathf.Clamp(index, 0, cards.Count - 1);
+        }
+
         private static bool HandleAnimation()
         {
             bool animationUpdate = false;
@@ -789,14 +883,13 @@ namespace KitchenCardsManager.Patches
                     ReadyHeldTime = 0f;
                     AnimationCurrentTime = 0f;
                     IsPerformingAnimation = false;
-                    _pages[_selectedPageIndex].Redraw();
                 }
                 else
                 {
                     AnimationCurrentTime += Time.deltaTime;
                     animationUpdate = true;
-                    _pages[_selectedPageIndex].Redraw();
                 }
+                HandleInteractionRequireRedraw = true;
             }
             return animationUpdate;
         }
@@ -865,21 +958,24 @@ namespace KitchenCardsManager.Patches
             return false;
         }
 
-        private static bool HandleAddRemoveCard(InputState state)
+        private static bool HandleReadyButtonHold(InputState state, ICard activeCardSelected)
         {
             if (state.SecondaryAction1 == ButtonState.Released)
             {
                 PerformedReady = false;
                 ReadyHeldTime = 0f;
-                _pages[_selectedPageIndex].Redraw();
+                HandleInteractionRequireRedraw = true;
             }
 
             else if (NetworkHelper.IsHost() && !PerformedReady && CardsManagerController.IsInKitchen
                 && (state.SecondaryAction1 == ButtonState.Held || state.SecondaryAction1 == ButtonState.Pressed))
             {
-                if (CardsManagerController.CanBeAddedToRun(_pages[_selectedPageIndex].SelectedUnlock.ID, out string statusMessage))
+                string statusMessage = "Unknown ready held error";
+                if ((IsCardManagerMode && CardsManagerController.CanBeAddedToRun(_pages[_selectedPageIndex].SelectedUnlock.ID, out statusMessage)) ||
+                    (!IsCardManagerMode && activeCardSelected != null && activeCardSelected is Unlock activeUnlockSelected && CardsManagerController.CanBeRemovedFromRun(activeUnlockSelected.ID, out statusMessage)))
                 {
                     ReadyHeldTime += Time.deltaTime;
+                    HandleInteractionRequireRedraw = true;
                     if (ReadyHeldTime > ReadyHeldThreshold)
                     {
                         IsPerformingAnimation = true;
@@ -914,6 +1010,11 @@ namespace KitchenCardsManager.Patches
         private static void AddSelectedCardToRun(out string statusMessage)
         {
             _pages[_selectedPageIndex].AddSelectedCardToRun(out statusMessage);
+        }
+
+        private static bool RemoveSelectedCardFromRun(int unlockID, out string statusMessage)
+        {
+            return CardsManagerController.RemoveProgressionUnlock(unlockID, out statusMessage);
         }
     }
 }

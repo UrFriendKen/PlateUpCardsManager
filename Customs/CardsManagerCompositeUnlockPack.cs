@@ -19,7 +19,7 @@ namespace KitchenCardsManager.Customs
             (ModularUnlockPack)GDOUtils.GetExistingGDO(ModularUnlockPackReferences.ThemeCardsPack)
         };
 
-        public override void OnRegister(GameDataObject gameDataObject)
+        public override void OnRegister(CompositeUnlockPack gameDataObject)
         {
             Main.LogInfo("Registered: " + this.UniqueNameID);
         }
