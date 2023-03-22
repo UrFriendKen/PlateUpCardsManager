@@ -394,15 +394,12 @@ namespace KitchenCardsManager
                 return false;
             }
             MethodInfo getComponentDataGeneric = EntityManagerGetComponentData.MakeGenericMethod(type);
-            Main.LogInfo(getComponentDataGeneric);
             comp = getComponentDataGeneric.Invoke(EntityManager, new object[] { e });
             return true;
         }
 
         private bool IsEqualCondition(object obj, object check)
         {
-            Main.LogInfo(obj.GetType());
-            Main.LogInfo(check.GetType());
             if (obj.GetType() != check.GetType())
             {
                 return false;

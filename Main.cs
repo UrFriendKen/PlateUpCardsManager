@@ -11,7 +11,6 @@ using KitchenMods;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.Serialization.Formatters;
 using UnityEngine;
 
 // Namespace should have "Kitchen" in the beginning
