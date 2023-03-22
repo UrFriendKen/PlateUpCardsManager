@@ -16,6 +16,8 @@ namespace KitchenCardsManager
 {
     internal class CardsManagerController : GameSystemBase
     {
+        MethodInfo EntityManagerGetComponentData;
+
         internal static bool IsInKitchen { get => GameInfo.CurrentScene == SceneType.Kitchen; }
 
         internal static SceneType CurrentScene { get => GameInfo.CurrentScene; }
@@ -25,10 +27,39 @@ namespace KitchenCardsManager
 
         protected static Queue<int> UnlocksToRemove = new Queue<int>();
 
+        static HashSet<Type> SupportedEffects = new HashSet<Type>
+        {
+            typeof(ParameterEffect),
+            typeof(StatusEffect),
+            typeof(ThemeAddEffect),
+            typeof(ShopEffect),
+            typeof(StartBonusEffect),
+            typeof(EnableGroupEffect),
+            typeof(CustomerSpawnEffect),
+            typeof(GlobalEffect)
+        };
+        
+        static HashSet<Type> SupportedRemoveEffectTypes = new HashSet<Type>
+        {
+            typeof(CCabinetModifier),           // Confirmed functional
+            typeof(CApplianceSpeedModifier),    // Confirmed functional
+            typeof(CAppliesStatus),
+            typeof(CTableModifier),             // Confirmed functional
+            typeof(CQueueModifier)
+        };
+        static HashSet<Type> SupportedRemoveEffectConditions = new HashSet<Type>
+        {
+            typeof(CEffectAlways),  // Confirmed functional
+            typeof(CEffectWhileBeingUsed),
+            typeof(CEffectAtNight)  // Confirmed functional
+        };
+
         EntityQuery ActiveUnlocks;
         EntityQuery ActiveDishes;
         EntityQuery GlobalEffects;
         EntityQuery BonusStaples;
+        EntityQuery RemoveBlueprints;
+        EntityQuery ShopDiscounts;
         EntityQuery Duplicators;
         EntityQuery RandomiseShopPrices;
         EntityQuery UpgradedShops;
@@ -42,6 +73,12 @@ namespace KitchenCardsManager
 
         NativeArray<Entity> BonusStapleEntities;
         HashSet<int> DestroyedBonusStaples;
+
+        NativeArray<Entity> RemoveBlueprintEntities;
+        HashSet<int> DestroyedRemoveBlueprints;
+
+        NativeArray<Entity> ShopDiscountEntities;
+        HashSet<int> DestroyedShopDiscounts;
 
         NativeArray<Entity> DuplicatorEntities;
         int DestroyedDuplicatorsCount;
@@ -67,24 +104,41 @@ namespace KitchenCardsManager
         protected override void Initialise()
         {
             base.Initialise();
+            EntityManagerGetComponentData = typeof(EntityManager).GetMethod("GetComponentData", BindingFlags.Public | BindingFlags.Instance, null, new Type[] { typeof(Entity) }, null);
+
             ActiveUnlocks = GetEntityQuery(typeof(CProgressionUnlock));
             ActiveDishes = GetEntityQuery(typeof(CMenuItem));
+
             GlobalEffects = GetEntityQuery(typeof(CAppliesEffect), typeof(CEffectRangeGlobal));
             DestroyedGlobalEffects = new HashSet<int>();
+
             BonusStaples = GetEntityQuery(typeof(CShopStaple));
             DestroyedBonusStaples = new HashSet<int>();
+
+            RemoveBlueprints = GetEntityQuery(typeof(CRemovesShopBlueprint));
+            DestroyedRemoveBlueprints = new HashSet<int>();
+
+            ShopDiscounts = GetEntityQuery(typeof(CGrantsShopDiscount));
+            DestroyedShopDiscounts = new HashSet<int>();
+
             Duplicators = GetEntityQuery(typeof(CBlueprintGrantDuplicator));
             DestroyedDuplicatorsCount = 0;
+
             RandomiseShopPrices = GetEntityQuery(typeof(CRandomiseShopPrices));
             DestroyedRandomiseShopPricesCount = 0;
+
             UpgradedShops = GetEntityQuery(typeof(CUpgradedShopChance));
             DestroyedUpgradedShops = new HashSet<int>();
+
             Refreshes = GetEntityQuery(typeof(CBlueprintRefreshChance));
             DestroyedRefreshes = new HashSet<int>();
+
             Rebuyables = GetEntityQuery(typeof(CBlueprintRebuyableChance));
             DestroyedRebuyables = new HashSet<int>();
+
             CustomerTypes = GetEntityQuery(typeof(CCustomerType), typeof(CCustomerSpawnDefinition));
             DestroyedCustomerTypes = new HashSet<int>();
+
             SpawnModifiers = GetEntityQuery(typeof(CCustomerSpawnModifier));
             DestroyedSpawnModifiers = new HashSet<int>();
         }
@@ -96,6 +150,12 @@ namespace KitchenCardsManager
 
             BonusStapleEntities = BonusStaples.ToEntityArray(Allocator.Temp);
             DestroyedBonusStaples.Clear();
+
+            RemoveBlueprintEntities = RemoveBlueprints.ToEntityArray(Allocator.Temp);
+            DestroyedRemoveBlueprints.Clear();
+
+            ShopDiscountEntities = ShopDiscounts.ToEntityArray(Allocator.Temp);
+            DestroyedShopDiscounts.Clear();
 
             DuplicatorEntities = Duplicators.ToEntityArray(Allocator.Temp);
             DestroyedDuplicatorsCount = 0;
@@ -123,6 +183,8 @@ namespace KitchenCardsManager
         {
             GlobalEffectEntities.Dispose();
             BonusStapleEntities.Dispose();
+            RemoveBlueprintEntities.Dispose();
+            ShopDiscountEntities.Dispose();
             DuplicatorEntities.Dispose();
             RandomiseShopPricesEntities.Dispose();
             UpgradedShopEntities.Dispose();
@@ -277,11 +339,6 @@ namespace KitchenCardsManager
                     else
                     {
                         UndoGlobalEffect((GlobalEffect)unlockEffect);
-                        //ecb.AddComponent(ecb.CreateEntity(), new CNewEffectUnlock
-                        //{
-                        //    ID = unlockCard.ID,
-                        //    Index = i
-                        //});
                     }
                 }
                 else
@@ -318,8 +375,8 @@ namespace KitchenCardsManager
                 if (DestroyedGlobalEffects.Contains(i))
                     continue;
 
-                if (Require(GlobalEffectEntities[i], effect.EffectCondition.GetType(), out var conditionComp) && IsEquivalent(conditionComp, effect.EffectCondition) &&
-                    Require(GlobalEffectEntities[i], effect.EffectType.GetType(), out var typeComp) && IsEquivalent(typeComp, effect.EffectType))
+                if (Require(GlobalEffectEntities[i], effect.EffectCondition.GetType(), out var conditionComp) && IsEqualCondition(conditionComp, effect.EffectCondition) &&
+                    Require(GlobalEffectEntities[i], effect.EffectType.GetType(), out var typeComp) && IsEqualType(typeComp, effect.EffectType))
                 {
                     DestroyedGlobalEffects.Add(i);
                     EntityManager.DestroyEntity(GlobalEffectEntities[i]);
@@ -329,20 +386,56 @@ namespace KitchenCardsManager
             return true;
         }
 
-        private bool Require(Entity e, Type compType, out object comp)
+        private bool Require(Entity e, Type type, out object comp)
         {
-            Type[] parameterTypes = new Type[] { typeof(Entity), compType.MakeByRefType() };
-            MethodInfo method = GetType().GetMethod("Require", BindingFlags.NonPublic | BindingFlags.Instance, null, parameterTypes, null);
-            MethodInfo genericMethod = method.MakeGenericMethod(compType);
-            object[] args = { e, null };
-            bool result = (bool)genericMethod.Invoke(this, args);
-            comp = args[1];
-            return result;
+            comp = null;
+            if (!EntityManager.HasComponent(e, type))
+            {
+                return false;
+            }
+            MethodInfo getComponentDataGeneric = EntityManagerGetComponentData.MakeGenericMethod(type);
+            Main.LogInfo(getComponentDataGeneric);
+            comp = getComponentDataGeneric.Invoke(EntityManager, new object[] { e });
+            return true;
         }
 
-        private bool IsEquivalent(object obj, object check)
+        private bool IsEqualCondition(object obj, object check)
         {
-            // Compare type and contents
+            Main.LogInfo(obj.GetType());
+            Main.LogInfo(check.GetType());
+            if (obj.GetType() != check.GetType())
+            {
+                return false;
+            }
+
+            if (obj.GetType() == typeof(CEffectAlways))
+                return EffectConditionComparer.CEffectAlwaysComparer.CompareEqual(obj, check);
+            if (obj.GetType() == typeof(CEffectWhileBeingUsed))
+                return EffectConditionComparer.CEffectWhileBeingUsedComparer.CompareEqual(obj, check);
+            if (obj.GetType() == typeof(CEffectAtNight))
+                return EffectConditionComparer.CEffectAtNightComparer.CompareEqual(obj, check);
+
+            return false;
+        }
+
+        private bool IsEqualType(object obj, object check)
+        {
+            if (obj.GetType() != check.GetType())
+            {
+                return false;
+            }
+
+            if (obj.GetType() == typeof(CCabinetModifier))
+                return EffectTypeComparer.CCabinetModifierComparer.CompareEqual(obj, check);
+            if (obj.GetType() == typeof(CApplianceSpeedModifier))
+                return EffectTypeComparer.CApplianceSpeedModifierComparer.CompareEqual(obj, check);
+            if (obj.GetType() == typeof(CAppliesStatus))
+                return EffectTypeComparer.CAppliesStatusComparer.CompareEqual(obj, check);
+            if (obj.GetType() == typeof(CTableModifier))
+                return EffectTypeComparer.CTableModifierComparer.CompareEqual(obj, check);
+            if (obj.GetType() == typeof(CQueueModifier))
+                return EffectTypeComparer.CQueueModifierComparer.CompareEqual(obj, check);
+
             return false;
         }
 
@@ -358,16 +451,19 @@ namespace KitchenCardsManager
 
         private bool UndoShopEffect(ShopEffect effect)
         {
-            for (int i = 0; i < BonusStapleEntities.Length; i++)
+            if (effect.AddStaple != null)
             {
-                if (DestroyedBonusStaples.Contains(i))
-                    continue;
-
-                if (Require(BonusStapleEntities[i], out CShopStaple staple) && staple.Appliance == effect.AddStaple.ID)
+                for (int i = 0; i < BonusStapleEntities.Length; i++)
                 {
-                    DestroyedBonusStaples.Add(i);
-                    EntityManager.DestroyEntity(BonusStapleEntities[i]);
-                    break;
+                    if (DestroyedBonusStaples.Contains(i))
+                        continue;
+
+                    if (Require(BonusStapleEntities[i], out CShopStaple staple) && staple.Appliance == effect.AddStaple.ID)
+                    {
+                        DestroyedBonusStaples.Add(i);
+                        EntityManager.DestroyEntity(BonusStapleEntities[i]);
+                        break;
+                    }
                 }
             }
 
@@ -382,18 +478,34 @@ namespace KitchenCardsManager
 
             if (effect.ExtraShopBlueprints != 0)
             {
-                Set(EntityManager.CreateEntity(), new CRemovesShopBlueprint
+                for (int i = 0; i < RemoveBlueprintEntities.Length; i++)
                 {
-                    Count = effect.ExtraShopBlueprints
-                });
+                    if (DestroyedRemoveBlueprints.Contains(i))
+                        continue;
+
+                    if (Require(RemoveBlueprintEntities[i], out CRemovesShopBlueprint removes) && removes.Count == -effect.ExtraShopBlueprints)
+                    {
+                        DestroyedRemoveBlueprints.Add(i);
+                        EntityManager.DestroyEntity(RemoveBlueprintEntities[i]);
+                        break;
+                    }
+                }
             }
 
             if (effect.ShopCostDecrease != 0f)
             {
-                Set(EntityManager.CreateEntity(), new CGrantsShopDiscount
+                for (int i = 0; i < ShopDiscountEntities.Length; i++)
                 {
-                    Amount = 1f / (1f - effect.ShopCostDecrease)
-                });
+                    if (DestroyedShopDiscounts.Contains(i))
+                        continue;
+
+                    if (Require(ShopDiscountEntities[i], out CGrantsShopDiscount discount) && discount.Amount == effect.ShopCostDecrease)
+                    {
+                        DestroyedShopDiscounts.Add(i);
+                        EntityManager.DestroyEntity(ShopDiscountEntities[i]);
+                        break;
+                    }
+                }
             }
 
             if (effect.RandomiseShopPrices)
@@ -534,15 +646,18 @@ namespace KitchenCardsManager
                 statusMessage = $"{unlock.Name} already added!";
                 return false;
             }
-            if (!unlock.IsUnlockable)
+            if (!unlock.IsUnlockable && !Main.StartingUnlocks.Contains(unlock.ID))
             {
                 statusMessage = $"{unlock.Name} is not unlockable!";
                 return false;
             }
             if (unlock.CardType == CardType.FranchiseTier)
             {
-                statusMessage = $"You can only get {unlock.Name} by franchising!";
-                return false;
+                if ((unlock is UnlockCard unlockCard) && unlockCard.Effects.Select(x => x.GetType()).Where(type => !SupportedEffects.Contains(type)).Count() > 0)
+                {
+                    statusMessage = $"You can only get {unlock.Name} by franchising!";
+                    return false;
+                }
             }
             if (GameInfo.AllCurrentCards.Intersect(unlock.Requires).Count() != unlock.Requires.Count())
             {
@@ -568,16 +683,6 @@ namespace KitchenCardsManager
 
         internal static bool CanBeRemovedFromRun(int unlockID, out string statusMessage)
         {
-            HashSet<Type> supportedEffectTypes = new HashSet<Type>
-            {
-                typeof(ParameterEffect),
-                typeof(StatusEffect),
-                typeof(ThemeAddEffect),
-                typeof(ShopEffect),
-                typeof(StartBonusEffect),
-                typeof(EnableGroupEffect),
-                typeof(CustomerSpawnEffect)
-            };
 
             if (CurrentScene != SceneType.Kitchen)
             {
@@ -593,16 +698,32 @@ namespace KitchenCardsManager
             }
             if (unlock is UnlockCard unlockCard)
             {
-                IEnumerable<Type> unlockEffectTypes = unlockCard.Effects.Select(x => x.GetType()).Where(type => !supportedEffectTypes.Contains(type));
-                if (unlockEffectTypes.Count() > 0)
+                IEnumerable<Type> unsupportedUnlockEffects = unlockCard.Effects.Select(x => x.GetType()).Where(type => !SupportedEffects.Contains(type));
+                if (unsupportedUnlockEffects.Count() > 0)
                 {
-                    statusMessage = "Contains unsupported effect types!";
-                    foreach (Type type in unlockEffectTypes)
+                    statusMessage = "Contains unsupported effects!";
+                    foreach (Type type in unsupportedUnlockEffects)
                     {
                         statusMessage += $"\n- {type.Name}";
                     }
                     return false;
                 }
+
+                bool hasUnsupportedGlobalEffect = false;
+                statusMessage = "Contains unsupported global effects!";
+                IEnumerable<GlobalEffect> globalEffects = unlockCard.Effects.Where(x => x.GetType() == typeof(GlobalEffect)).Cast<GlobalEffect>();
+                foreach (GlobalEffect globalEffect in globalEffects)
+                {
+                    if (!SupportedRemoveEffectTypes.Contains(globalEffect.EffectType.GetType()) || !SupportedRemoveEffectConditions.Contains(globalEffect.EffectCondition.GetType()))
+                    {
+                        statusMessage += $"\n- {globalEffect.EffectType.GetType().Name} ({globalEffect.EffectCondition.GetType().Name})";
+                        hasUnsupportedGlobalEffect = true;
+                    }
+                }
+
+                if (hasUnsupportedGlobalEffect)
+                    return false;
+
             }
             statusMessage = $"Successfully removed {unlock.Name}";
             return true;

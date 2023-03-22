@@ -11,6 +11,7 @@ using KitchenMods;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.Serialization.Formatters;
 using UnityEngine;
 
 // Namespace should have "Kitchen" in the beginning
@@ -46,10 +47,20 @@ namespace KitchenCardsManager
 
         internal static PreferenceManager KLPrefManager;
 
+        internal static HashSet<int> StartingUnlocks { get; private set; } = new HashSet<int>();
+
         public Main() : base(MOD_GUID, MOD_NAME, MOD_AUTHOR, MOD_VERSION, MOD_GAMEVERSION, Assembly.GetExecutingAssembly()) { }
 
         protected override void OnInitialise()
         {
+            foreach (RestaurantSetting setting in Data.Get<RestaurantSetting>())
+            {
+                if (setting.StartingUnlock != null)
+                {
+                    StartingUnlocks.Add(setting.StartingUnlock.ID);
+                }
+            }
+
             RegisterPreferences();
             SetupKLPreferencesMenu();
 
@@ -104,7 +115,7 @@ namespace KitchenCardsManager
 
             foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
             {
-                KLPrefManager.RegisterPreference<PreferenceBool>(new PreferenceBool(unlock.ID.ToString(), unlock.IsUnlockable || (unlock.CardType == CardType.Setting && !UnlockHelpers.IsModded(unlock))));
+                KLPrefManager.RegisterPreference<PreferenceBool>(new PreferenceBool(unlock.ID.ToString(), unlock.IsUnlockable || StartingUnlocks.Contains(unlock.ID)));
             }
             KLPrefManager.Load();
         }
