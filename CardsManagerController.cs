@@ -54,6 +54,8 @@ namespace KitchenCardsManager
             typeof(CEffectAtNight)  // Confirmed functional
         };
 
+        bool IsKitchenParametersChanged = false;
+
         EntityQuery ActiveUnlocks;
         EntityQuery ActiveDishes;
         EntityQuery GlobalEffects;
@@ -291,7 +293,6 @@ namespace KitchenCardsManager
         {
             foreach (UnlockEffect unlockEffect in unlockEffects)
             {
-                Type unlockEffectType = unlockEffect.GetType();
                 if (!(unlockEffect is ParameterEffect))
                 {
                     if (!(unlockEffect is GlobalEffect))
@@ -346,12 +347,28 @@ namespace KitchenCardsManager
                     UndoParameterEffect((ParameterEffect)unlockEffect);
                 }
             }
+
+            if (IsKitchenParametersChanged)
+            {
+                IsKitchenParametersChanged = false;
+                Set(EntityManager.CreateEntity(), new CNewParameterChange
+                {
+                    ID = GDOUtils.GetCustomGameDataObject<VariableParameterUnlockCard>().ID,
+                    Index = 0
+                });
+            }
         }
 
         private bool UndoParameterEffect(ParameterEffect effect)
         {
             VariableParameterUnlockCard unlockCard = GDOUtils.GetCustomGameDataObject<VariableParameterUnlockCard>() as VariableParameterUnlockCard;
-            unlockCard.UpdateParameterEffect(new KitchenParameters
+            if (!IsKitchenParametersChanged)
+            {
+                unlockCard.ResetParameterEffect();
+            }
+
+            IsKitchenParametersChanged = true;
+            unlockCard.AddParameterEffect(new KitchenParameters
             {
                 CustomersPerHour = -effect.Parameters.CustomersPerHour,
                 CustomersPerHourReduction = -effect.Parameters.CustomersPerHourReduction,
@@ -359,13 +376,7 @@ namespace KitchenCardsManager
                 MinimumGroupSize = -effect.Parameters.MinimumGroupSize,
                 CurrentCourses = -effect.Parameters.CurrentCourses
             });
-
-            Set(EntityManager.CreateEntity(), new CNewParameterChange
-            {
-                ID = GDOUtils.GetCustomGameDataObject<VariableParameterUnlockCard>().ID,
-                Index = 0
-            });
-            return false;
+            return true;
         }
 
         private bool UndoGlobalEffect(GlobalEffect effect)

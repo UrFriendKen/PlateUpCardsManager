@@ -32,12 +32,34 @@ namespace KitchenCardsManager.Customs
             })
         };
 
-        internal void UpdateParameterEffect(KitchenParameters kitchenParameters)
+        internal void ResetParameterEffect()
         {
             Effects[0] = new ParameterEffect
             {
-                Parameters = kitchenParameters
+                Parameters = new KitchenParameters
+                {
+                    CustomersPerHour = 0,
+                    CustomersPerHourReduction = 0,
+                    MaximumGroupSize = 0,
+                    MinimumGroupSize = 0,
+                    CurrentCourses = 0
+                }
             };
+        }
+
+        internal void AddParameterEffect(KitchenParameters kitchenParameters)
+        {
+            ParameterEffect effect = Effects[0] as ParameterEffect;
+            KitchenParameters newKitchenParameters = new KitchenParameters
+            {
+                CustomersPerHour = effect.Parameters.CustomersPerHour + kitchenParameters.CustomersPerHour,
+                CustomersPerHourReduction = effect.Parameters.CustomersPerHourReduction + kitchenParameters.CustomersPerHourReduction,
+                MaximumGroupSize = effect.Parameters.MaximumGroupSize + kitchenParameters.MaximumGroupSize,
+                MinimumGroupSize = effect.Parameters.MinimumGroupSize + kitchenParameters.MinimumGroupSize,
+                CurrentCourses = 0
+            };
+            effect.Parameters = newKitchenParameters;
+            Effects[0] = effect;
         }
     }
 }
