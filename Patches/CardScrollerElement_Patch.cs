@@ -9,8 +9,6 @@ using KitchenLib.Utils;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using Unity.Collections;
 using UnityEngine;
 
 namespace KitchenCardsManager.Patches

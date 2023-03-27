@@ -244,7 +244,7 @@ namespace KitchenCardsManager
             using NativeArray<CMenuItem> menuItems = ActiveDishes.ToComponentDataArray<CMenuItem>(Allocator.Temp);
 
             List<UnlockEffect> residualEffects = new List<UnlockEffect>();
-            HashSet<int> menuItemsIndicesToDestroy = new HashSet<int>();
+            List<int> menuItemsIndicesToDestroy = new List<int>();
             for (int i = activeUnlocks.Length - 1; i > -1; i--)
             {
                 Entity entity = activeUnlocks[i];
@@ -265,7 +265,7 @@ namespace KitchenCardsManager
                 {
                     for (int j = 0; j < menuItems.Length; j++)
                     {
-                        if (dish.ID != menuItems[i].SourceDish)
+                        if (dish.ID != menuItems[j].SourceDish)
                             continue;
                         menuItemsIndicesToDestroy.Add(j);
                         break;
@@ -279,7 +279,7 @@ namespace KitchenCardsManager
                 EntityManager.DestroyEntity(entity);
             }
 
-            foreach(int i in menuItemsIndicesToDestroy)
+            foreach (int i in menuItemsIndicesToDestroy.OrderByDescending(x => x))
             {
                 EntityManager.DestroyEntity(activeDishes[i]);
             }
