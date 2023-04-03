@@ -276,6 +276,13 @@ namespace KitchenCardsManager
                     Main.LogInfo($"Unknown Type derived from unlock ({unlock2.GetType()}). Skipping");
                     continue;
                 }
+
+                if (TryGetSingleton(out SKitchenParameters kitchenParameters))
+                {
+                    kitchenParameters.Parameters.CustomersPerHourReduction -= unlock.CustomerMultiplier.Value();
+                    SetSingleton(kitchenParameters);
+                }
+
                 EntityManager.DestroyEntity(entity);
             }
 
