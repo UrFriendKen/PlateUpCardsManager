@@ -1,6 +1,6 @@
-﻿using Kitchen;
+﻿using CodelessModInterop;
+using Kitchen;
 using KitchenData;
-using KitchenLib.Customs;
 using KitchenLib.Preferences;
 using System;
 using System.Collections.Generic;
@@ -11,14 +11,14 @@ namespace KitchenCardsManager.Helpers
 {
     internal static class UnlockHelpers
     {
-        internal static bool IsModded(int id)
+        internal static bool IsModded(int id, out string modName)
         {
-            return CustomGDO.GDOs.ContainsKey(id);
+            return ModdedResourceRegistry.TryGetModdedGDO(id, out GameDataObject _, out modName);
         }
 
-        internal static bool IsModded(GameDataObject gdo)
+        internal static bool IsModded(GameDataObject gdo, out string modName)
         {
-            return IsModded(gdo.ID);
+            return IsModded(gdo.ID, out modName);
         }
 
         internal static IEnumerable<Unlock> GetAllUnlocksEnumerable()
@@ -48,17 +48,17 @@ namespace KitchenCardsManager.Helpers
 
         internal static IEnumerable<Unlock> GetAllUnmoddedUnlocksEnumerable()
         {
-            return GetAllUnlocksEnumerable().Where(x => !IsModded(x.ID));
+            return GetAllUnlocksEnumerable().Where(x => !IsModded(x.ID, out string _));
         }
 
         internal static IEnumerable<Unlock> GetAllModdedUnlocksEnumerable()
         {
-            return GetAllUnlocksEnumerable().Where(x => IsModded(x.ID));
+            return GetAllUnlocksEnumerable().Where(x => IsModded(x.ID, out string _));
         }
 
         internal static string GetCardGroup(Unlock unlock)
         {
-            return $"{(IsModded(unlock)? CustomGDO.GDOs[unlock.ID].ModName : "Vanilla")}:{unlock.UnlockGroup}:{unlock.CardType}";
+            return $"{(IsModded(unlock, out string modName)? modName : "Vanilla")}:{unlock.UnlockGroup}:{unlock.CardType}";
         }
 
         internal static bool GetEnabledState(Unlock unlock)
