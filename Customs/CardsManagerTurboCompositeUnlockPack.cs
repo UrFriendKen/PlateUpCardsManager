@@ -15,8 +15,8 @@ namespace KitchenCardsManager.Customs
         public override List<UnlockPack> Packs => new List<UnlockPack>()
         {
             (ModularUnlockPack)GDOUtils.GetExistingGDO(ModularUnlockPackReferences.FranchiseCardsPack),
-            (ModularUnlockPack)GDOUtils.GetCustomGameDataObject<CardsManagerTurboModularUnlockPack>().GameDataObject,
-            (ModularUnlockPack)GDOUtils.GetExistingGDO(ModularUnlockPackReferences.ThemeCardsPack)
+            (ModularUnlockPack)GDOUtils.GetExistingGDO(ModularUnlockPackReferences.ThemeCardsPack),
+            (ModularUnlockPack)GDOUtils.GetCustomGameDataObject<CardsManagerTurboModularUnlockPack>().GameDataObject
         };
 
         public override void OnRegister(CompositeUnlockPack gameDataObject)
