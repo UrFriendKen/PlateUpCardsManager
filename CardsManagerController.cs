@@ -3,6 +3,7 @@ using Kitchen.ShopBuilder;
 using KitchenCardsManager.Customs;
 using KitchenCardsManager.Helpers;
 using KitchenData;
+using KitchenLib.Preferences;
 using KitchenLib.Utils;
 using System;
 using System.Collections.Generic;
@@ -245,6 +246,7 @@ namespace KitchenCardsManager
 
             List<UnlockEffect> residualEffects = new List<UnlockEffect>();
             List<int> menuItemsIndicesToDestroy = new List<int>();
+            bool ignoreRequiresCheck = !Main.KLPrefManager.GetPreference<PreferenceBool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING).Get();
             for (int i = activeUnlocks.Length - 1; i > -1; i--)
             {
                 Entity entity = activeUnlocks[i];
@@ -252,7 +254,7 @@ namespace KitchenCardsManager
                 if (!GameData.Main.TryGet(progression.ID, out Unlock unlock2))
                     continue;
 
-                if (progression.ID != unlockID && !unlock2.Requires.Contains(unlock))
+                if (progression.ID != unlockID && (ignoreRequiresCheck || !unlock2.Requires.Contains(unlock)))
                 {
                     continue;
                 }
@@ -654,6 +656,13 @@ namespace KitchenCardsManager
                 statusMessage = "You must be in a restaurant to add cards!";
                 return false;
             }
+
+            if (!Main.KLPrefManager.GetPreference<PreferenceBool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING).Get())
+            {
+                statusMessage = "Validity check disabled. Allow adding any card.";
+                return true;
+            }
+
             Unlock unlock = UnlockHelpers.GetAllUnlocksEnumerable().Where(x => x.ID == unlockID).First();
 
             if (CurrentUnlockIDs.Contains(unlockID) || UnlocksToAdd.Contains(unlockID))
@@ -704,8 +713,14 @@ namespace KitchenCardsManager
                 statusMessage = "You must be in a restaurant to add cards!";
                 return false;
             }
-            Unlock unlock = UnlockHelpers.GetAllUnlocksEnumerable().Where(x => x.ID == unlockID).First();
 
+            if (!Main.KLPrefManager.GetPreference<PreferenceBool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING).Get())
+            {
+                statusMessage = "Validity check disabled. Allow removing any card.";
+                return true;
+            }
+
+            Unlock unlock = UnlockHelpers.GetAllUnlocksEnumerable().Where(x => x.ID == unlockID).First();
             if (!CurrentUnlockIDs.Contains(unlockID) || UnlocksToRemove.Contains(unlockID))
             {
                 statusMessage = $"{unlock.Name} is not active!";

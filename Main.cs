@@ -23,7 +23,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.3.4";
+        private const string MOD_VERSION = "1.3.5";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -38,6 +38,7 @@ namespace KitchenCardsManager
 
         internal const string CARDS_MANAGER_MODE_PREFERENCE_ID = "Mode";
         internal const string CARDS_MANAGER_RESET_MODE_PREFERENCE_ID = "ResetMode";
+        internal const string CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING = "AddRemoveValidityCheck";
 
         internal static bool BlacklistModeEnabled { get; private set; }
         internal static bool WhitelistModeEnabled { get; private set; }
@@ -109,8 +110,9 @@ namespace KitchenCardsManager
         {
             KLPrefManager = new PreferenceManager(MOD_GUID);
 
-            KLPrefManager.RegisterPreference<PreferenceInt>(new PreferenceInt(CARDS_MANAGER_MODE_PREFERENCE_ID, 1));
-            KLPrefManager.RegisterPreference<PreferenceInt>(new PreferenceInt(CARDS_MANAGER_RESET_MODE_PREFERENCE_ID, 0));
+            KLPrefManager.RegisterPreference(new PreferenceInt(CARDS_MANAGER_MODE_PREFERENCE_ID, 1));
+            KLPrefManager.RegisterPreference(new PreferenceInt(CARDS_MANAGER_RESET_MODE_PREFERENCE_ID, 0));
+            KLPrefManager.RegisterPreference(new PreferenceBool(CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING, true));
 
             foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
             {
@@ -180,10 +182,16 @@ namespace KitchenCardsManager
                     Main.KLPrefManager.GetPreference<PreferenceInt>(preferenceID).Set(i);
                     Main.KLPrefManager.Save();
                 }
+                public static void Preference_OnChanged(string preferenceID, bool b)
+                {
+                    Main.KLPrefManager.GetPreference<PreferenceBool>(preferenceID).Set(b);
+                    Main.KLPrefManager.Save();
+                }
             }
 
             private Option<int> Mode;
             private Option<int> ResetMode;
+            private Option<bool> ValidAddAndRemoveChecking;
 
             public CardsManagerMenu(Transform container, ModuleList module_list) : base(container, module_list)
             {
@@ -216,6 +224,16 @@ namespace KitchenCardsManager
                 Add<int>(this.ResetMode).OnChanged += delegate (object _, int f)
                 {
                     PreferencesHelper.Preference_OnChanged(Main.CARDS_MANAGER_RESET_MODE_PREFERENCE_ID, f);
+                };
+
+                this.ValidAddAndRemoveChecking = new Option<bool>(
+                    new List<bool>() { false, true },
+                    Main.KLPrefManager.GetPreference<PreferenceBool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING).Get(),
+                    new List<string>() { "Disabled", "Enabled" });
+                AddLabel("Prevent Impossible Card Combinations");
+                Add<bool>(this.ValidAddAndRemoveChecking).OnChanged += delegate (object _, bool b)
+                {
+                    PreferencesHelper.Preference_OnChanged(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING, b);
                 };
 
                 New<SpacerElement>();
