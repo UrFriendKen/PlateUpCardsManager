@@ -58,7 +58,11 @@ namespace KitchenCardsManager
         bool IsKitchenParametersChanged = false;
 
         EntityQuery ActiveUnlocks;
-        EntityQuery ActiveDishes;
+        EntityQuery MenuItems;
+        EntityQuery AvailableIngredients;
+        EntityQuery BlockedIngredients;
+        EntityQuery PossibleExtras;
+
         EntityQuery GlobalEffects;
         EntityQuery BonusStaples;
         EntityQuery RemoveBlueprints;
@@ -70,6 +74,18 @@ namespace KitchenCardsManager
         EntityQuery Rebuyables;
         EntityQuery CustomerTypes;
         EntityQuery SpawnModifiers;
+
+        NativeArray<Entity> MenuItemEntities;
+        HashSet<int> DestroyedMenuItems;
+
+        NativeArray<Entity> AvailableIngredientEntities;
+        HashSet<int> DestroyedAvailableIngredients;
+
+        NativeArray<Entity> BlockedIngredientEntities;
+        HashSet<int> DestroyedBlockedIngredients;
+
+        NativeArray<Entity> PossibleExtraEntities;
+        HashSet<int> DestroyedPossibleExtras;
 
         NativeArray<Entity> GlobalEffectEntities;
         HashSet<int> DestroyedGlobalEffects;
@@ -110,7 +126,20 @@ namespace KitchenCardsManager
             EntityManagerGetComponentData = typeof(EntityManager).GetMethod("GetComponentData", BindingFlags.Public | BindingFlags.Instance, null, new Type[] { typeof(Entity) }, null);
 
             ActiveUnlocks = GetEntityQuery(typeof(CProgressionUnlock));
-            ActiveDishes = GetEntityQuery(typeof(CMenuItem));
+            MenuItems = GetEntityQuery(typeof(CMenuItem));
+            DestroyedMenuItems = new HashSet<int>();
+            
+            AvailableIngredients = GetEntityQuery(typeof(CAvailableIngredient));
+            DestroyedAvailableIngredients = new HashSet<int>();
+
+            BlockedIngredients = GetEntityQuery(typeof(CBlockedIngredient));
+            DestroyedBlockedIngredients = new HashSet<int>();
+
+            PossibleExtras = GetEntityQuery(typeof(CBlockedIngredient));
+            DestroyedPossibleExtras = new HashSet<int>();
+            
+
+
 
             GlobalEffects = GetEntityQuery(typeof(CAppliesEffect), typeof(CEffectRangeGlobal));
             DestroyedGlobalEffects = new HashSet<int>();
@@ -148,6 +177,21 @@ namespace KitchenCardsManager
 
         protected virtual void BeforeRun()
         {
+            MenuItemEntities = MenuItems.ToEntityArray(Allocator.Temp);
+            DestroyedMenuItems.Clear();
+
+            AvailableIngredientEntities = AvailableIngredients.ToEntityArray(Allocator.Temp);
+            DestroyedAvailableIngredients.Clear();
+
+            BlockedIngredientEntities = BlockedIngredients.ToEntityArray(Allocator.Temp);
+            DestroyedBlockedIngredients.Clear();
+
+            PossibleExtraEntities = PossibleExtras.ToEntityArray(Allocator.Temp);
+            DestroyedPossibleExtras.Clear();
+
+
+
+
             GlobalEffectEntities = GlobalEffects.ToEntityArray(Allocator.Temp);
             DestroyedGlobalEffects.Clear();
 
@@ -184,6 +228,10 @@ namespace KitchenCardsManager
 
         protected virtual void AfterRun()
         {
+            MenuItemEntities.Dispose();
+            AvailableIngredientEntities.Dispose();
+            BlockedIngredientEntities.Dispose();
+
             GlobalEffectEntities.Dispose();
             BonusStapleEntities.Dispose();
             RemoveBlueprintEntities.Dispose();
@@ -241,11 +289,9 @@ namespace KitchenCardsManager
 
             using NativeArray<Entity> activeUnlocks = ActiveUnlocks.ToEntityArray(Allocator.Temp);
             using NativeArray<CProgressionUnlock> progressions = ActiveUnlocks.ToComponentDataArray<CProgressionUnlock>(Allocator.Temp);
-            using NativeArray<Entity> activeDishes = ActiveDishes.ToEntityArray(Allocator.Temp);
-            using NativeArray<CMenuItem> menuItems = ActiveDishes.ToComponentDataArray<CMenuItem>(Allocator.Temp);
 
             List<UnlockEffect> residualEffects = new List<UnlockEffect>();
-            List<int> menuItemsIndicesToDestroy = new List<int>();
+            List<Dish> dishesToDestroy = new List<Dish>();
             bool ignoreRequiresCheck = !Main.KLPrefManager.GetPreference<PreferenceBool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING).Get();
             for (int i = activeUnlocks.Length - 1; i > -1; i--)
             {
@@ -265,13 +311,7 @@ namespace KitchenCardsManager
                 }
                 else if (unlock2 is Dish dish)
                 {
-                    for (int j = 0; j < menuItems.Length; j++)
-                    {
-                        if (dish.ID != menuItems[j].SourceDish)
-                            continue;
-                        menuItemsIndicesToDestroy.Add(j);
-                        break;
-                    }
+                    dishesToDestroy.Add(dish);
                 }
                 else
                 {
@@ -288,13 +328,130 @@ namespace KitchenCardsManager
                 EntityManager.DestroyEntity(entity);
             }
 
-            foreach (int i in menuItemsIndicesToDestroy.OrderByDescending(x => x))
-            {
-                EntityManager.DestroyEntity(activeDishes[i]);
-            }
-
+            UndoDishUnlocks(dishesToDestroy);
             UndoUnlockEffects(residualEffects);
 
+            return true;
+        }
+
+        private void UndoDishUnlocks(List<Dish> dishGDOs)
+        {
+            foreach (Dish dish in dishGDOs)
+            {
+                if (dish.UnlocksMenuItems != null)
+                {
+                    foreach (Dish.MenuItem unlockMenuItem in dish.UnlocksMenuItems)
+                    {
+                        UndoUnlocksMenuItems(unlockMenuItem);
+                    }
+                }
+
+                if (dish.BlockProviders != null)
+                {
+                    foreach (Item blockedItem in dish.BlockProviders)
+                    {
+                        UndoBlockedIngredient(blockedItem.ID);
+                    }
+                }
+
+                if (dish.UnlocksIngredients != null)
+                {
+                    foreach (Dish.IngredientUnlock unlockIngredient in dish.UnlocksIngredients)
+                    {
+                        UndoAvailableIngredient(unlockIngredient.MenuItem.ID, unlockIngredient.Ingredient.ID);
+                    }
+                }
+
+                if (dish.ExtraOrderUnlocks != null)
+                {
+                    foreach (Dish.IngredientUnlock extraOrderUnlock in dish.ExtraOrderUnlocks)
+                    {
+                        UndoPossibleExtra(extraOrderUnlock.MenuItem.ID, extraOrderUnlock.Ingredient.ID);
+                    }
+                }
+            }
+        }
+
+        private bool UndoUnlocksMenuItems(Dish.MenuItem unlockMenuItem)
+        {
+            for (int i = 0; i < MenuItemEntities.Length; i++)
+            {
+                if (DestroyedMenuItems.Contains(i))
+                    continue;
+
+                if (Require(MenuItemEntities[i], out CMenuItem menuItem) && (menuItem.Item == unlockMenuItem.Item.ID))
+                {
+                    DestroyedMenuItems.Add(i);
+                    EntityManager.DestroyEntity(MenuItemEntities[i]);
+
+                    if (unlockMenuItem.Item is ItemGroup itemGroup)
+                    {
+                        foreach (ItemGroup.ItemSet derivedSet in itemGroup.DerivedSets)
+                        {
+                            if (derivedSet.RequiresUnlock)
+                            {
+                                continue;
+                            }
+                            foreach (Item item in derivedSet.Items)
+                            {
+                                UndoAvailableIngredient(unlockMenuItem.Item.ID, item.ID);
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+            return true;
+        }
+
+        private bool UndoAvailableIngredient(int unlockMenuItemID, int ingredient)
+        {
+            for (int i = 0; i < AvailableIngredientEntities.Length; i++)
+            {
+                if (DestroyedAvailableIngredients.Contains(i))
+                    continue;
+
+                if (Require(AvailableIngredientEntities[i], out CAvailableIngredient availableIngredient) && availableIngredient.MenuItem == unlockMenuItemID && availableIngredient.Ingredient == ingredient)
+                {
+                    DestroyedAvailableIngredients.Add(i);
+                    EntityManager.DestroyEntity(AvailableIngredientEntities[i]);
+                    break;
+                }
+            }
+            return true;
+        }
+
+        private bool UndoBlockedIngredient(int blockedIngredientID)
+        {
+            for (int i = 0; i < BlockedIngredientEntities.Length; i++)
+            {
+                if (DestroyedBlockedIngredients.Contains(i))
+                    continue;
+
+                if (Require(BlockedIngredientEntities[i], out CBlockedIngredient blockedIngredient) && blockedIngredient.Item == blockedIngredientID)
+                {
+                    DestroyedBlockedIngredients.Add(i);
+                    EntityManager.DestroyEntity(BlockedIngredientEntities[i]);
+                    break;
+                }
+            }
+            return true;
+        }
+
+        private bool UndoPossibleExtra(int unlockMenuItemID, int ingredient)
+        {
+            for (int i = 0; i < PossibleExtraEntities.Length; i++)
+            {
+                if (DestroyedPossibleExtras.Contains(i))
+                    continue;
+
+                if (Require(PossibleExtraEntities[i], out CPossibleExtra possibleExtra) && possibleExtra.MenuItem == unlockMenuItemID && possibleExtra.Ingredient == ingredient)
+                {
+                    DestroyedPossibleExtras.Add(i);
+                    EntityManager.DestroyEntity(PossibleExtraEntities[i]);
+                    break;
+                }
+            }
             return true;
         }
 
