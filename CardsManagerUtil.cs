@@ -89,5 +89,43 @@ namespace KitchenCardsManager
         {
             return _registeredUnlockPages;
         }
+
+        public static bool AddProgressionUnlockToRun(int unlockID)
+        {
+            return AddProgressionUnlockToRun(unlockID, out _);
+        }
+
+        public static bool AddProgressionUnlockToRun(int unlockID, out string statusMessage)
+        {
+            bool success = false;
+            if (CardsManagerController.CurrentUnlockIDs.Contains(unlockID))
+            {
+                statusMessage = $"Unlock {unlockID} already added!";
+            }
+            else
+            {
+                success = CardsManagerController.AddProgressionUnlock(unlockID, out statusMessage);
+            }
+            return success;
+        }
+
+        public static bool RemoveProgressionUnlockFromRun(int unlockID)
+        {
+            return RemoveProgressionUnlockFromRun(unlockID, out _);
+        }
+
+        public static bool RemoveProgressionUnlockFromRun(int unlockID, out string statusMessage)
+        {
+            bool success = false;
+            if (!CardsManagerController.CurrentUnlockIDs.Contains(unlockID))
+            {
+                statusMessage = $"Unlock {unlockID} is not active!";
+            }
+            else
+            {
+                success = CardsManagerController.RemoveProgressionUnlock(unlockID, out statusMessage);
+            }
+            return success;
+        }
     }
 }

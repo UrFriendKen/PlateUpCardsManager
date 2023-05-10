@@ -42,16 +42,13 @@ namespace KitchenCardsManager.Patches
             switch (Main.PrefManager.Get<string>(Main.CARDS_MANAGER_CARD_GROUPS_ENABLED))
             {
                 case "VANILLA":
-                    Main.LogInfo("Vanilla");
                     __result = __result.Intersect(UnlockHelpers.GetAllUnmoddedUnlocksEnumerable());
                     break;
                 case "MODDED":
-                    Main.LogInfo("Modded");
                     __result = __result.Intersect(UnlockHelpers.GetAllModdedUnlocksEnumerable());
                     break;
                 case "ALL":
                 default:
-                    Main.LogInfo("All");
                     break;
             }
         }

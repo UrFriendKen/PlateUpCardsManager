@@ -4,6 +4,7 @@ using KitchenCardsManager.Customs;
 using KitchenCardsManager.Helpers;
 using KitchenData;
 using KitchenLib.Utils;
+using KitchenMods;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,8 @@ using UnityEngine;
 
 namespace KitchenCardsManager
 {
+    public struct SAddingByCardsManager : IComponentData, IModComponent { }
+
     public class CardsManagerController : GameSystemBase
     {
         MethodInfo EntityManagerGetComponentData;
@@ -21,6 +24,8 @@ namespace KitchenCardsManager
         internal static bool IsInKitchen { get => GameInfo.CurrentScene == SceneType.Kitchen; }
 
         internal static SceneType CurrentScene { get => GameInfo.CurrentScene; }
+
+        private static List<int> CurrentUnlockIDsTemp = new List<int>();
         internal static HashSet<int> CurrentUnlockIDs { get => GameInfo.AllCurrentCards.Select(x => x.CardID).ToHashSet(); }
 
         protected static Queue<int> UnlocksToAdd = new Queue<int>();
@@ -246,11 +251,18 @@ namespace KitchenCardsManager
 
         protected override void OnUpdate()
         {
+            for (int i = CurrentUnlockIDsTemp.Count - 1; i > -1; i--)
+            {
+                int unlockID = CurrentUnlockIDsTemp[i];
+                if (CurrentUnlockIDs.Contains(unlockID))
+                    CurrentUnlockIDsTemp.Remove(unlockID);
+            }
+
             BeforeRun();
-            if (UnlocksToAdd.Count > 0)
+            if (!Has<SAddingByCardsManager>() && UnlocksToAdd.Count > 0)
             {
                 int unlockID = UnlocksToAdd.Dequeue();
-                if (UnlockHelpers.IsValidUnlock(unlockID))
+                if (CanBeAddedToRun(unlockID, out _))
                 {
                     Entity entity = EntityManager.CreateEntity();
                     Set(entity, new CProgressionOption()
@@ -260,13 +272,15 @@ namespace KitchenCardsManager
                     });
                     Set<CSkipShowingRecipe>(entity);
                     Set<CProgressionOption.Selected>(entity);
+                    Set<SAddingByCardsManager>(entity);
+                    CurrentUnlockIDsTemp.Add(unlockID);
                 }
             }
 
             if (UnlocksToRemove.Count > 0)
             {
                 int unlockID = UnlocksToRemove.Dequeue();
-                if (UnlockHelpers.IsValidUnlock(unlockID))
+                if (CanBeRemovedFromRun(unlockID, out _))
                 {
                     if (!TryRemoveActiveUnlock(unlockID))
                     {
@@ -785,7 +799,7 @@ namespace KitchenCardsManager
             return true;
         }
 
-        public static bool AddProgressionUnlock(int unlockID, out string statusMessage)
+        internal static bool AddProgressionUnlock(int unlockID, out string statusMessage)
         {
             if (CanBeAddedToRun(unlockID, out statusMessage))
             {
@@ -795,7 +809,7 @@ namespace KitchenCardsManager
             return false;
         }
 
-        public static bool RemoveProgressionUnlock(int unlockID, out string statusMessage)
+        internal static bool RemoveProgressionUnlock(int unlockID, out string statusMessage)
         {
             if (CanBeRemovedFromRun(unlockID, out statusMessage))
             {
@@ -819,9 +833,15 @@ namespace KitchenCardsManager
                 return true;
             }
 
+            if (!UnlockHelpers.IsValidUnlock(unlockID))
+            {
+                statusMessage = $"{unlockID} is not a valid unlock!";
+                return false;
+            }
+
             Unlock unlock = UnlockHelpers.GetAllUnlocksEnumerable().Where(x => x.ID == unlockID).First();
 
-            if (CurrentUnlockIDs.Contains(unlockID) || UnlocksToAdd.Contains(unlockID))
+            if (CurrentUnlockIDs.Contains(unlockID) || UnlocksToAdd.Contains(unlockID) || CurrentUnlockIDsTemp.Contains(unlockID))
             {
                 statusMessage = $"{unlock.Name} already added!";
                 return false;
@@ -874,6 +894,12 @@ namespace KitchenCardsManager
             {
                 statusMessage = "Validity check disabled. Allow removing any card.";
                 return true;
+            }
+
+            if (!UnlockHelpers.IsValidUnlock(unlockID))
+            {
+                statusMessage = $"{unlockID} is not a valid unlock!";
+                return false;
             }
 
             Unlock unlock = UnlockHelpers.GetAllUnlocksEnumerable().Where(x => x.ID == unlockID).First();
