@@ -65,7 +65,7 @@ namespace KitchenCardsManager.Helpers
         {
             try
             {
-                return Main.KLPrefManager.GetPreference<PreferenceBool>(unlock.ID.ToString()).Get();
+                return Main.PrefManager.Get<bool>(unlock.ID.ToString());
             }
             catch (NullReferenceException)
             {

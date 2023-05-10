@@ -3,7 +3,6 @@ using Kitchen.ShopBuilder;
 using KitchenCardsManager.Customs;
 using KitchenCardsManager.Helpers;
 using KitchenData;
-using KitchenLib.Preferences;
 using KitchenLib.Utils;
 using System;
 using System.Collections.Generic;
@@ -15,7 +14,7 @@ using UnityEngine;
 
 namespace KitchenCardsManager
 {
-    internal class CardsManagerController : GameSystemBase
+    public class CardsManagerController : GameSystemBase
     {
         MethodInfo EntityManagerGetComponentData;
 
@@ -292,7 +291,7 @@ namespace KitchenCardsManager
 
             List<UnlockEffect> residualEffects = new List<UnlockEffect>();
             List<Dish> dishesToDestroy = new List<Dish>();
-            bool ignoreRequiresCheck = !Main.KLPrefManager.GetPreference<PreferenceBool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING).Get();
+            bool ignoreRequiresCheck = !Main.PrefManager.Get<bool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING);
             for (int i = activeUnlocks.Length - 1; i > -1; i--)
             {
                 Entity entity = activeUnlocks[i];
@@ -786,7 +785,7 @@ namespace KitchenCardsManager
             return true;
         }
 
-        internal static bool AddProgressionUnlock(int unlockID, out string statusMessage)
+        public static bool AddProgressionUnlock(int unlockID, out string statusMessage)
         {
             if (CanBeAddedToRun(unlockID, out statusMessage))
             {
@@ -796,7 +795,7 @@ namespace KitchenCardsManager
             return false;
         }
 
-        internal static bool RemoveProgressionUnlock(int unlockID, out string statusMessage)
+        public static bool RemoveProgressionUnlock(int unlockID, out string statusMessage)
         {
             if (CanBeRemovedFromRun(unlockID, out statusMessage))
             {
@@ -814,7 +813,7 @@ namespace KitchenCardsManager
                 return false;
             }
 
-            if (!Main.KLPrefManager.GetPreference<PreferenceBool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING).Get())
+            if (!Main.PrefManager.Get<bool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING))
             {
                 statusMessage = "Validity check disabled. Allow adding any card.";
                 return true;
@@ -871,7 +870,7 @@ namespace KitchenCardsManager
                 return false;
             }
 
-            if (!Main.KLPrefManager.GetPreference<PreferenceBool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING).Get())
+            if (!Main.PrefManager.Get<bool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING))
             {
                 statusMessage = "Validity check disabled. Allow removing any card.";
                 return true;

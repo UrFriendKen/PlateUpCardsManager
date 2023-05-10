@@ -29,11 +29,31 @@ namespace KitchenCardsManager.Patches
             {
                 FilterWithBlacklist(ref __result);
             }
+            FilterWithEnabledCardGroups(ref __result);
         }
 
         private static void FilterWithBlacklist(ref IEnumerable<Unlock> __result)
         {
             __result = __result.Where(unlock => UnlockHelpers.GetEnabledState(unlock));
+        }
+
+        private static void FilterWithEnabledCardGroups(ref IEnumerable<Unlock> __result)
+        {
+            switch (Main.PrefManager.Get<string>(Main.CARDS_MANAGER_CARD_GROUPS_ENABLED))
+            {
+                case "VANILLA":
+                    Main.LogInfo("Vanilla");
+                    __result = __result.Intersect(UnlockHelpers.GetAllUnmoddedUnlocksEnumerable());
+                    break;
+                case "MODDED":
+                    Main.LogInfo("Modded");
+                    __result = __result.Intersect(UnlockHelpers.GetAllModdedUnlocksEnumerable());
+                    break;
+                case "ALL":
+                default:
+                    Main.LogInfo("All");
+                    break;
+            }
         }
     }
 }

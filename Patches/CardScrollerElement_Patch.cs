@@ -164,7 +164,7 @@ namespace KitchenCardsManager.Patches
             {
                 get
                 {
-                    return Main.KLPrefManager.GetPreference<PreferenceBool>(SelectedUnlock.ID.ToString()).Get();
+                    return Main.PrefManager.Get<bool>(SelectedUnlock.ID.ToString());
                 }
             }
 
@@ -414,14 +414,14 @@ namespace KitchenCardsManager.Patches
 
             private static bool SetPreference(Unlock unlock, bool enabled)
             {
-                Main.KLPrefManager.GetPreference<PreferenceBool>(unlock.ID.ToString()).Set(enabled);
-                Main.KLPrefManager.Save();
+                Main.PrefManager.Set<bool>(unlock.ID.ToString(), enabled);
                 return enabled;
             }
 
             private static bool TogglePreference(Unlock unlock)
             {
-                bool newValue = !Main.KLPrefManager.GetPreference<PreferenceBool>(unlock.ID.ToString()).Get();
+                
+                bool newValue = !Main.PrefManager.Get<bool>(unlock.ID.ToString());
                 return SetPreference(unlock, newValue);
             }
 

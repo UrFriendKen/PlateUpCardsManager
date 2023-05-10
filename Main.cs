@@ -6,8 +6,8 @@ using KitchenCardsManager.Patches;
 using KitchenData;
 using KitchenLib;
 using KitchenLib.Event;
-using KitchenLib.Preferences;
 using KitchenMods;
+using PreferenceSystem;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -23,7 +23,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.3.5";
+        private const string MOD_VERSION = "1.4.0";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -39,13 +39,14 @@ namespace KitchenCardsManager
         internal const string CARDS_MANAGER_MODE_PREFERENCE_ID = "Mode";
         internal const string CARDS_MANAGER_RESET_MODE_PREFERENCE_ID = "ResetMode";
         internal const string CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING = "AddRemoveValidityCheck";
+        internal const string CARDS_MANAGER_CARD_GROUPS_ENABLED = "CardGroupsEnabled";
 
         internal static bool BlacklistModeEnabled { get; private set; }
         internal static bool WhitelistModeEnabled { get; private set; }
 
         private static bool Logged = false;
 
-        internal static PreferenceManager KLPrefManager;
+        internal static PreferenceSystemManager PrefManager;
 
         internal static HashSet<int> StartingUnlocks { get; private set; } = new HashSet<int>();
 
@@ -60,11 +61,8 @@ namespace KitchenCardsManager
                     StartingUnlocks.Add(setting.StartingUnlock.ID);
                 }
             }
-
             RegisterPreferences();
-            SetupKLPreferencesMenu();
-
-            UpdateMode(KLPrefManager.GetPreference<PreferenceInt>(CARDS_MANAGER_MODE_PREFERENCE_ID).Get());
+            UpdateMode(PrefManager.Get<int>(CARDS_MANAGER_MODE_PREFERENCE_ID));
         }
 
         protected override void OnPostActivate(Mod mod)
@@ -108,34 +106,75 @@ namespace KitchenCardsManager
 
         private static void RegisterPreferences()
         {
-            KLPrefManager = new PreferenceManager(MOD_GUID);
+            PrefManager = new PreferenceSystemManager(MOD_GUID, MOD_NAME);
 
-            KLPrefManager.RegisterPreference(new PreferenceInt(CARDS_MANAGER_MODE_PREFERENCE_ID, 1));
-            KLPrefManager.RegisterPreference(new PreferenceInt(CARDS_MANAGER_RESET_MODE_PREFERENCE_ID, 0));
-            KLPrefManager.RegisterPreference(new PreferenceBool(CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING, true));
+            PrefManager
+            .AddLabel("Cards Manager")
 
-            foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
+            .AddInfo("Vanilla: Cards settings have no effect.")
+            .AddInfo("Blacklist: Disabled cards will not appear.")
+            .AddInfo("Whitelist: All enabled cards have a chance of appearing if prerequisites are met.")
+            .AddLabel("Mode")
+            .AddOption<int>(
+                CARDS_MANAGER_MODE_PREFERENCE_ID,
+                1,
+                new int[] { 0, 1, 2 },
+                new string[] { "Vanilla", "Blacklist", "Whitelist" },
+                UpdateMode)
+            .AddLabel("Automatically Reset Mode To Vanilla")
+            .AddOption<int>(
+                CARDS_MANAGER_RESET_MODE_PREFERENCE_ID,
+                0,
+                new int[] { 0, 1, 2 },
+                new string[] { "Never", "When Starting New Run", "When Entering HQ" })
+            .AddLabel("Impossible Card Combinations (Use at your own risk!)")
+            .AddOption<bool>(
+                CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING,
+                true,
+                new bool[] { true, false },
+                new string[] { "Prevent", "Allow" })
+            .AddSpacer()
+            .AddLabel("Enabled Card Groups")
+            .AddOption<string>(
+                CARDS_MANAGER_CARD_GROUPS_ENABLED,
+                "ALL",
+                new string[] { "ALL", "VANILLA", "MODDED" },
+                new string[] { "All Cards", "Vanilla Cards Only", "Modded Cards Only" })
+            .AddLabel("Edit Cards")
+            .AddSelfRegisteredSubmenu<CardsManagerScrollerMenu<MainMenuAction>, CardsManagerScrollerMenu<PauseMenuAction>>("Open Cards Menu")
+            .AddSpacer()
+            .AddSpacer();
+
+            AddProperties();
+
+            Events.PreferenceMenu_MainMenu_CreateSubmenusEvent += (s, args) =>
             {
-                KLPrefManager.RegisterPreference<PreferenceBool>(new PreferenceBool(unlock.ID.ToString(), unlock.IsUnlockable || StartingUnlocks.Contains(unlock.ID)));
-            }
-            KLPrefManager.Load();
+                CardsManagerScrollerMenu<MainMenuAction> cardsMenu = new CardsManagerScrollerMenu<MainMenuAction>(args.Container, args.Module_list);
+                args.Menus.Add(typeof(CardsManagerScrollerMenu<MainMenuAction>), cardsMenu);
+            };
+
+            Events.PreferenceMenu_PauseMenu_CreateSubmenusEvent += (s, args) =>
+            {
+                CardsManagerScrollerMenu<PauseMenuAction> cardsMenu = new CardsManagerScrollerMenu<PauseMenuAction>(args.Container, args.Module_list);
+                args.Menus.Add(typeof(CardsManagerScrollerMenu<PauseMenuAction>), cardsMenu);
+            };
+
+            PrefManager.RegisterMenu(PreferenceSystemManager.MenuType.PauseMenu);
         }
 
-        private static void SetupKLPreferencesMenu()
+        private static void AddProperties()
         {
-            Events.PreferenceMenu_PauseMenu_CreateSubmenusEvent += (s, args) => {
-                args.Menus.Add(typeof(CardsManagerMenu<PauseMenuAction>), new CardsManagerMenu<PauseMenuAction>(args.Container, args.Module_list));
-                args.Menus.Add(typeof(CardsManagerScrollerMenu<PauseMenuAction>), new CardsManagerScrollerMenu<PauseMenuAction>(args.Container, args.Module_list));
-            };
-            ModsPreferencesMenu<PauseMenuAction>.RegisterMenu(MOD_NAME, typeof(CardsManagerMenu<PauseMenuAction>), typeof(PauseMenuAction));
+            foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
+            {
+                PrefManager.AddProperty<bool>(unlock.ID.ToString(), unlock.IsUnlockable || StartingUnlocks.Contains(unlock.ID));
+            }
         }
 
         internal static void ResetModeToVanilla()
         {
             LogInfo("Resetting mode to Vanilla");
-            KLPrefManager.GetPreference<PreferenceInt>(CARDS_MANAGER_MODE_PREFERENCE_ID).Set(0);
-            KLPrefManager.Save();
-            UpdateMode(KLPrefManager.GetPreference<PreferenceInt>(CARDS_MANAGER_MODE_PREFERENCE_ID).Get());
+            PrefManager.Set<int>(CARDS_MANAGER_MODE_PREFERENCE_ID, 0);
+            UpdateMode(PrefManager.Get<int>(CARDS_MANAGER_MODE_PREFERENCE_ID));
         }
 
         private static void UpdateMode(int modeValue)
@@ -172,84 +211,6 @@ namespace KitchenCardsManager
         internal static void LogWarning(object _log) { LogWarning(_log.ToString()); }
         internal static void LogError(object _log) { LogError(_log.ToString()); }
         #endregion
-
-        private class CardsManagerMenu<T> : KLMenu<T>
-        {
-            private static class PreferencesHelper
-            {
-                public static void Preference_OnChanged(string preferenceID, int i)
-                {
-                    Main.KLPrefManager.GetPreference<PreferenceInt>(preferenceID).Set(i);
-                    Main.KLPrefManager.Save();
-                }
-                public static void Preference_OnChanged(string preferenceID, bool b)
-                {
-                    Main.KLPrefManager.GetPreference<PreferenceBool>(preferenceID).Set(b);
-                    Main.KLPrefManager.Save();
-                }
-            }
-
-            private Option<int> Mode;
-            private Option<int> ResetMode;
-            private Option<bool> ValidAddAndRemoveChecking;
-
-            public CardsManagerMenu(Transform container, ModuleList module_list) : base(container, module_list)
-            {
-            }
-
-            public override void Setup(int player_id)
-            {
-                AddLabel("Cards Manager");
-
-                AddInfo("Vanilla: Cards settings have no effect.");
-                AddInfo("Blacklist: Disabled cards will not appear.");
-                AddInfo("Whitelist: All enabled cards have a chance of appearing if prerequisites are met.");
-
-                AddLabel("Mode");
-                this.Mode = new Option<int>(
-                    new List<int>() { 0, 1, 2 },
-                    Main.KLPrefManager.GetPreference<PreferenceInt>(Main.CARDS_MANAGER_MODE_PREFERENCE_ID).Get(),
-                    new List<string>() { "Vanilla", "Blacklist", "Whitelist" });
-                Add<int>(this.Mode).OnChanged += delegate (object _, int f)
-                {
-                    PreferencesHelper.Preference_OnChanged(Main.CARDS_MANAGER_MODE_PREFERENCE_ID, f);
-                    Main.UpdateMode(f);
-                };
-
-                this.ResetMode = new Option<int>(
-                    new List<int>() { 0, 1, 2 },
-                    Main.KLPrefManager.GetPreference<PreferenceInt>(Main.CARDS_MANAGER_RESET_MODE_PREFERENCE_ID).Get(),
-                    new List<string>() { "Never", "When Starting New Run", "When Entering HQ" });
-                AddLabel("Automatically Reset Mode To Vanilla");
-                Add<int>(this.ResetMode).OnChanged += delegate (object _, int f)
-                {
-                    PreferencesHelper.Preference_OnChanged(Main.CARDS_MANAGER_RESET_MODE_PREFERENCE_ID, f);
-                };
-
-                this.ValidAddAndRemoveChecking = new Option<bool>(
-                    new List<bool>() { false, true },
-                    Main.KLPrefManager.GetPreference<PreferenceBool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING).Get(),
-                    new List<string>() { "Disabled", "Enabled" });
-                AddLabel("Prevent Impossible Card Combinations");
-                Add<bool>(this.ValidAddAndRemoveChecking).OnChanged += delegate (object _, bool b)
-                {
-                    PreferencesHelper.Preference_OnChanged(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING, b);
-                };
-
-                New<SpacerElement>();
-
-                AddLabel("Edit Cards");
-                AddSubmenuButton("Open Cards Menu", typeof(CardsManagerScrollerMenu<T>));
-
-                New<SpacerElement>();
-                New<SpacerElement>();
-
-                AddButton(base.Localisation["MENU_BACK_SETTINGS"], delegate
-                {
-                    RequestPreviousMenu();
-                });
-            }
-        }
 
         private class CardsManagerScrollerMenu<T> : KLMenu<T>
         {
