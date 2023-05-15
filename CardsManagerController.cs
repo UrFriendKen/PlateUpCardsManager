@@ -139,7 +139,7 @@ namespace KitchenCardsManager
             BlockedIngredients = GetEntityQuery(typeof(CBlockedIngredient));
             DestroyedBlockedIngredients = new HashSet<int>();
 
-            PossibleExtras = GetEntityQuery(typeof(CBlockedIngredient));
+            PossibleExtras = GetEntityQuery(typeof(CPossibleExtra));
             DestroyedPossibleExtras = new HashSet<int>();
             
 
