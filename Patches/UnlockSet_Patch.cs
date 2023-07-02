@@ -23,6 +23,13 @@ namespace KitchenCardsManager.Patches
             RunGetCardSet(ref __result, request);
         }
 
+        [HarmonyPatch(typeof(UnlockSetGroup), nameof(UnlockSetGroup.GetCardSet))]
+        [HarmonyPostfix]
+        private static void UnlockSetGroup_GetCardSet_Postfix(ref IEnumerable<Unlock> __result, UnlockRequest request)
+        {
+            RunGetCardSet(ref __result, request);
+        }
+
         private static void RunGetCardSet(ref IEnumerable<Unlock> __result, UnlockRequest request)
         {
             if (Main.BlacklistModeEnabled)
