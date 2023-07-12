@@ -23,7 +23,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.4.2";
+        private const string MOD_VERSION = "1.4.3";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -40,6 +40,9 @@ namespace KitchenCardsManager
         internal const string CARDS_MANAGER_RESET_MODE_PREFERENCE_ID = "ResetMode";
         internal const string CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING = "AddRemoveValidityCheck";
         internal const string CARDS_MANAGER_CARD_GROUPS_ENABLED = "CardGroupsEnabled";
+
+        internal const string CARDS_MANAGER_ADD_REMOVE_HOLD_DURATION = "AddRemoveHoldDuration";
+        internal const string CARDS_MANAGER_ENABLE_DISABLE_HOLD_DURATION = "EnableDisableHoldDuration";
 
         internal static bool BlacklistModeEnabled { get; private set; }
         internal static bool WhitelistModeEnabled { get; private set; }
@@ -142,6 +145,22 @@ namespace KitchenCardsManager
                 new string[] { "All Cards", "Vanilla Cards Only", "Modded Cards Only" })
             .AddLabel("Edit Cards")
             .AddSelfRegisteredSubmenu<CardsManagerScrollerMenu<MainMenuAction>, CardsManagerScrollerMenu<PauseMenuAction>>("Open Cards Menu")
+            .AddSubmenu("Behavior", "behavior")
+                .AddLabel("Enable/Disable Hold Time")
+                .AddOption<float>(
+                    CARDS_MANAGER_ENABLE_DISABLE_HOLD_DURATION,
+                    1.5f,
+                    new float[] { 0.5f, 1f, 1.5f, 2f, 2.5f, 3f, 3.5f, 4f, 4.5f, 5f },
+                    new string[] { "0.5 seconds", "1 second", "1.5 seconds", "2 seconds", "2.5 seconds", "3 seconds", "3.5 seconds", "4 seconds", "4.5 seconds", "5 seconds" })
+                .AddLabel("Add/Remove Hold Time")
+                .AddOption<float>(
+                    CARDS_MANAGER_ADD_REMOVE_HOLD_DURATION,
+                    3f,
+                    new float[] { 0.5f, 1f, 1.5f, 2f, 2.5f, 3f, 3.5f, 4f, 4.5f, 5f },
+                    new string[] { "0.5 seconds", "1 second", "1.5 seconds", "2 seconds", "2.5 seconds", "3 seconds", "3.5 seconds", "4 seconds", "4.5 seconds", "5 seconds" })
+                .AddSpacer()
+                .AddSpacer()
+            .SubmenuDone()
             .AddSpacer()
             .AddSpacer();
 

@@ -517,12 +517,12 @@ namespace KitchenCardsManager.Patches
 
         private static float GrabHeldTime = 0f;
         private static bool PerformedGrab = false;
-        private static readonly float GrabHeldThreshold = 1.5f;
+        private static float GrabHeldThreshold => Main.PrefManager?.Get<float>(Main.CARDS_MANAGER_ENABLE_DISABLE_HOLD_DURATION) ?? 1.5f;
         internal static bool IsGrabDown { get => GrabHeldTime > 0f; }
 
         private static float ReadyHeldTime = 0f;
         private static bool PerformedReady = false;
-        private static readonly float ReadyHeldThreshold = 3f;
+        private static float ReadyHeldThreshold => Main.PrefManager?.Get<float>(Main.CARDS_MANAGER_ADD_REMOVE_HOLD_DURATION) ?? 3f;
         internal static bool IsReadyDown { get => ReadyHeldTime > 0f; }
 
         private static bool HandleInteractionRequireRedraw = false;
