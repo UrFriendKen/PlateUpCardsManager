@@ -86,5 +86,10 @@ namespace KitchenCardsManager.Helpers
         {
             return GetAllUnlocksEnumerable().Where(x => x.ID == unlockID).First().CardType == CardType.FranchiseTier;
         }
+
+        internal static bool GetDefaultEnabledState(Unlock unlock)
+        {
+            return unlock.IsUnlockable || Main.StartingUnlocks.Contains(unlock.ID);
+        }
     }
 }

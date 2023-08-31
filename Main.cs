@@ -23,7 +23,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.4.3";
+        private const string MOD_VERSION = "1.4.4";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -41,12 +41,15 @@ namespace KitchenCardsManager
         internal const string CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING = "AddRemoveValidityCheck";
         internal const string CARDS_MANAGER_CARD_GROUPS_ENABLED = "CardGroupsEnabled";
 
+        internal const string CARDS_MANAGER_CARD_DAY_INTERVAL = "CardDayInterval";
+
         internal const string CARDS_MANAGER_ADD_REMOVE_HOLD_DURATION = "AddRemoveHoldDuration";
         internal const string CARDS_MANAGER_ENABLE_DISABLE_HOLD_DURATION = "EnableDisableHoldDuration";
 
         internal static bool BlacklistModeEnabled { get; private set; }
         internal static bool WhitelistModeEnabled { get; private set; }
 
+        private const bool SHOULD_LOG = false;
         private static bool Logged = false;
 
         internal static PreferenceSystemManager PrefManager;
@@ -77,11 +80,46 @@ namespace KitchenCardsManager
             AddGameDataObject<CardsManagerCompositeUnlockPack>();
             AddGameDataObject<CardsManagerTurboModularUnlockPack>();
             AddGameDataObject<CardsManagerTurboCompositeUnlockPack>();
+
+            Events.BuildGameDataEvent += delegate (object _, BuildGameDataEventArgs args)
+            {
+                ModularUnlockPack themesModularUnlockPack = null;
+                foreach (CompositeUnlockPack compositeUnlockPack in args.gamedata.Get<CompositeUnlockPack>())
+                {
+                    int franchisePackIndex = -1;
+                    int themesPackIndex = -1;
+                    for (int i = 0; i < compositeUnlockPack.Packs.Count; i++)
+                    {
+                        switch (compositeUnlockPack.Packs[i].ID)
+                        {
+                            case 1355831133: // Franchise Card Pack
+                                franchisePackIndex = i;
+                                break;
+                            case 786043106: // Themes Card Pack
+                                if (themesModularUnlockPack == null && (compositeUnlockPack.Packs[i] is ModularUnlockPack modularUnlockPack))
+                                    themesModularUnlockPack = modularUnlockPack;
+                                themesPackIndex = i;
+                                break;
+                            default:
+                                break;
+                        }
+
+                        if (franchisePackIndex != -1 && themesPackIndex != -1)
+                            break;
+                    }
+
+                    if (franchisePackIndex > -1 && themesPackIndex - franchisePackIndex > 1 && themesModularUnlockPack != null)
+                    {
+                        compositeUnlockPack.Packs.RemoveAt(themesPackIndex);
+                        compositeUnlockPack.Packs.Insert(franchisePackIndex + 1, themesModularUnlockPack);
+                    }
+                }
+            };
         }
 
         protected override void OnUpdate()
         {
-            if (!Logged)
+            if (SHOULD_LOG && !Logged)
             {
                 foreach (CompositeUnlockPack compositepack in GameData.Main.Get<CompositeUnlockPack>())
                 {
@@ -113,10 +151,7 @@ namespace KitchenCardsManager
 
             PrefManager
             .AddLabel("Cards Manager")
-
-            .AddInfo("Vanilla: Cards settings have no effect.")
-            .AddInfo("Blacklist: Disabled cards will not appear.")
-            .AddInfo("Whitelist: All enabled cards have a chance of appearing if prerequisites are met.")
+            .AddInfo("See Cards Manager Steam workshop page for details on mode behavior.")
             .AddLabel("Mode")
             .AddOption<int>(
                 CARDS_MANAGER_MODE_PREFERENCE_ID,
@@ -130,6 +165,18 @@ namespace KitchenCardsManager
                 0,
                 new int[] { 0, 1, 2 },
                 new string[] { "Never", "When Starting New Run", "When Entering HQ" })
+            .AddLabel("Enabled Card Groups")
+            .AddOption<string>(
+                CARDS_MANAGER_CARD_GROUPS_ENABLED,
+                "ALL",
+                new string[] { "ALL", "VANILLA", "MODDED" },
+                new string[] { "All Cards", "Vanilla Cards Only", "Modded Cards Only" })
+            .AddLabel("Card Day Interval")
+            .AddOption<int>(
+                CARDS_MANAGER_CARD_DAY_INTERVAL,
+                -1,
+                new int[] { -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 },
+                new string[] { "Default", "No Card Day", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" })
             .AddLabel("Impossible Card Combinations (Use at your own risk!)")
             .AddOption<bool>(
                 CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING,
@@ -137,15 +184,20 @@ namespace KitchenCardsManager
                 new bool[] { true, false },
                 new string[] { "Prevent", "Allow" })
             .AddSpacer()
-            .AddLabel("Enabled Card Groups")
-            .AddOption<string>(
-                CARDS_MANAGER_CARD_GROUPS_ENABLED,
-                "ALL",
-                new string[] { "ALL", "VANILLA", "MODDED" },
-                new string[] { "All Cards", "Vanilla Cards Only", "Modded Cards Only" })
             .AddLabel("Edit Cards")
             .AddSelfRegisteredSubmenu<CardsManagerScrollerMenu<MainMenuAction>, CardsManagerScrollerMenu<PauseMenuAction>>("Open Cards Menu")
-            .AddSubmenu("Behavior", "behavior")
+            .AddButtonWithConfirm("Reset Card Settings", "Confirm reset all card settings to default?", delegate (GenericChoiceDecision decision)
+            {
+                foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
+                {
+                    PrefManager.Set<bool>(unlock.ID.ToString(), UnlockHelpers.GetDefaultEnabledState(unlock));
+                }
+                PrefManager.Set<string>(CARDS_MANAGER_CARD_GROUPS_ENABLED, "ALL");
+                PrefManager.Set<int>(CARDS_MANAGER_CARD_DAY_INTERVAL, -1);
+                PrefManager.Set<bool>(CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING, true);
+
+            })
+            .AddSubmenu("Controls Behavior", "controlsBehavior")
                 .AddLabel("Enable/Disable Hold Time")
                 .AddOption<float>(
                     CARDS_MANAGER_ENABLE_DISABLE_HOLD_DURATION,
