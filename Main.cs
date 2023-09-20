@@ -23,7 +23,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.4.4";
+        private const string MOD_VERSION = "1.4.5";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -45,6 +45,8 @@ namespace KitchenCardsManager
 
         internal const string CARDS_MANAGER_ADD_REMOVE_HOLD_DURATION = "AddRemoveHoldDuration";
         internal const string CARDS_MANAGER_ENABLE_DISABLE_HOLD_DURATION = "EnableDisableHoldDuration";
+
+        internal const string DISH_CARDS_GROUPING_ID = "dishCardsGrouping";
 
         internal static bool BlacklistModeEnabled { get; private set; }
         internal static bool WhitelistModeEnabled { get; private set; }
@@ -210,6 +212,16 @@ namespace KitchenCardsManager
                     3f,
                     new float[] { 0.5f, 1f, 1.5f, 2f, 2.5f, 3f, 3.5f, 4f, 4.5f, 5f },
                     new string[] { "0.5 seconds", "1 second", "1.5 seconds", "2 seconds", "2.5 seconds", "3 seconds", "3.5 seconds", "4 seconds", "4.5 seconds", "5 seconds" })
+                .AddSpacer()
+                .AddSpacer()
+            .SubmenuDone()
+            .AddSubmenu("Display", "display")
+                .AddLabel("Dish Cards Grouping")
+                .AddOption<int>(
+                    DISH_CARDS_GROUPING_ID,
+                    0,
+                    new int[] { 0, 1 },
+                    new string[] { "Default", "By Type" })
                 .AddSpacer()
                 .AddSpacer()
             .SubmenuDone()

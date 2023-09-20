@@ -57,7 +57,17 @@ namespace KitchenCardsManager.Helpers
 
         internal static string GetCardGroup(Unlock unlock)
         {
-            return $"{(IsModded(unlock, out string modName)? modName : "Vanilla")}:{unlock.UnlockGroup}:{unlock.CardType}";
+            string group = IsModded(unlock, out string modName) ? modName : "Vanilla";
+            switch (Main.PrefManager.Get<int>(Main.DISH_CARDS_GROUPING_ID))
+            {
+                case 1:
+                    group += $":{(unlock is Dish dish ? dish.Type.ToString() : "UnlockCard")}";
+                    break;
+                default:
+                    break;
+            }
+            group += $":{unlock.UnlockGroup}:{unlock.CardType}";
+            return group;
         }
 
         internal static bool GetEnabledState(Unlock unlock)
