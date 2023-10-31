@@ -3,29 +3,38 @@ using KitchenData;
 using System.Collections.Generic;
 using System.Linq;
 using KitchenCardsManager.Helpers;
+using System.Reflection;
+using System;
 
 namespace KitchenCardsManager.Patches
 {
     [HarmonyPatch]
     internal class UnlockSet_Patch
     {
-        [HarmonyPatch(typeof(UnlockSetAutomatic), nameof(UnlockSetAutomatic.GetCardSet))]
-        [HarmonyPostfix]
-        private static void UnlockSetAutomatic_GetCardSet_Postfix(ref IEnumerable<Unlock> __result, UnlockRequest request)
+        [HarmonyTargetMethods]
+        private static IEnumerable<MethodBase> UnlockSet_TargetMethods()
         {
-            RunGetCardSet(ref __result, request);
+            IEnumerable<MethodBase> targetMethods = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(AccessTools.GetTypesFromAssembly)
+                .Where(type => typeof(IUnlockSet).IsAssignableFrom(type) &&
+                        !type.IsAbstract &&
+                        type != typeof(IUnlockSet))
+                .SelectMany(type => type.GetMethods())
+                .Where(method => method.ReturnType == typeof(IEnumerable<Unlock>) && method.Name.StartsWith("GetCardSet"))
+                .Cast<MethodBase>();
+
+            Main.LogInfo($"Number of methods in UnlockSet_Patch: {targetMethods.Count()}");
+
+            foreach (MethodBase methodBase in targetMethods)
+            {
+                Main.LogInfo($"{methodBase.DeclaringType.FullName}.{methodBase.Name}");
+            }
+
+            return targetMethods;
         }
 
-        [HarmonyPatch(typeof(UnlockSetFixed), nameof(UnlockSetFixed.GetCardSet))]
         [HarmonyPostfix]
-        private static void UnlockSetFixed_GetCardSet_Postfix(ref IEnumerable<Unlock> __result, UnlockRequest request)
-        {
-            RunGetCardSet(ref __result, request);
-        }
-
-        [HarmonyPatch(typeof(UnlockSetGroup), nameof(UnlockSetGroup.GetCardSet))]
-        [HarmonyPostfix]
-        private static void UnlockSetGroup_GetCardSet_Postfix(ref IEnumerable<Unlock> __result, UnlockRequest request)
+        private static void UnlockSet_GetCardSet_Postfix(ref IEnumerable<Unlock> __result, UnlockRequest request)
         {
             RunGetCardSet(ref __result, request);
         }
