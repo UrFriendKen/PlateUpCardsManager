@@ -8,7 +8,6 @@ using KitchenLib;
 using KitchenLib.Event;
 using KitchenMods;
 using PreferenceSystem;
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -23,7 +22,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.4.6";
+        private const string MOD_VERSION = "1.5.0";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -45,14 +44,12 @@ namespace KitchenCardsManager
 
         internal const string CARDS_MANAGER_ADD_REMOVE_HOLD_DURATION = "AddRemoveHoldDuration";
         internal const string CARDS_MANAGER_ENABLE_DISABLE_HOLD_DURATION = "EnableDisableHoldDuration";
+        internal const string CARDS_MANAGER_AUTO_ADD_HOLD_DURATION = "AutoAddHoldDuration";
 
         internal const string DISH_CARDS_GROUPING_ID = "dishCardsGrouping";
 
         internal static bool BlacklistModeEnabled { get; private set; }
         internal static bool WhitelistModeEnabled { get; private set; }
-
-        private const bool SHOULD_LOG = false;
-        private static bool Logged = false;
 
         internal static PreferenceSystemManager PrefManager;
 
@@ -119,34 +116,6 @@ namespace KitchenCardsManager
             };
         }
 
-        protected override void OnUpdate()
-        {
-            if (SHOULD_LOG && !Logged)
-            {
-                foreach (CompositeUnlockPack compositepack in GameData.Main.Get<CompositeUnlockPack>())
-                {
-                    LogInfo($"CompositeUnlockPack - {compositepack.name} ({compositepack.ID})");
-                    try
-                    {
-                        foreach (UnlockPack unlockpack in compositepack.Packs)
-                        {
-                            LogInfo($"-- UnlockPack - {unlockpack.name} ({unlockpack.ID})");
-                        }
-                    }
-                    catch (NullReferenceException)
-                    {
-                        LogInfo($"-- Does not have Packs field. Is {compositepack.name} ({compositepack.ID}) not a CompositeUnlockPack?");
-                    }
-                }
-                foreach (ModularUnlockPack modularpack in GameData.Main.Get<ModularUnlockPack>())
-                {
-                    LogInfo($"ModularUnlockPack - {modularpack.name} ({modularpack.ID})");
-                }
-
-                Logged = true;
-            }
-        }
-
         private static void RegisterPreferences()
         {
             PrefManager = new PreferenceSystemManager(MOD_GUID, MOD_NAME);
@@ -193,7 +162,10 @@ namespace KitchenCardsManager
                 foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
                 {
                     PrefManager.Set<bool>(unlock.ID.ToString(), UnlockHelpers.GetDefaultEnabledState(unlock));
+                    PrefManager.Set<bool>(unlock.ID.ToString() + "_AutoAdd", false);
                 }
+                PrefManager.Set<int>(CARDS_MANAGER_MODE_PREFERENCE_ID, 1);
+                PrefManager.Set<int>(CARDS_MANAGER_RESET_MODE_PREFERENCE_ID, 0);
                 PrefManager.Set<string>(CARDS_MANAGER_CARD_GROUPS_ENABLED, "ALL");
                 PrefManager.Set<int>(CARDS_MANAGER_CARD_DAY_INTERVAL, -1);
                 PrefManager.Set<bool>(CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING, true);
@@ -209,6 +181,12 @@ namespace KitchenCardsManager
                 .AddLabel("Add/Remove Hold Time")
                 .AddOption<float>(
                     CARDS_MANAGER_ADD_REMOVE_HOLD_DURATION,
+                    3f,
+                    new float[] { 0.5f, 1f, 1.5f, 2f, 2.5f, 3f, 3.5f, 4f, 4.5f, 5f },
+                    new string[] { "0.5 seconds", "1 second", "1.5 seconds", "2 seconds", "2.5 seconds", "3 seconds", "3.5 seconds", "4 seconds", "4.5 seconds", "5 seconds" })
+                .AddLabel("Auto Add Hold Time")
+                .AddOption<float>(
+                    CARDS_MANAGER_AUTO_ADD_HOLD_DURATION,
                     3f,
                     new float[] { 0.5f, 1f, 1.5f, 2f, 2.5f, 3f, 3.5f, 4f, 4.5f, 5f },
                     new string[] { "0.5 seconds", "1 second", "1.5 seconds", "2 seconds", "2.5 seconds", "3 seconds", "3.5 seconds", "4 seconds", "4.5 seconds", "5 seconds" })
@@ -250,6 +228,7 @@ namespace KitchenCardsManager
             foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
             {
                 PrefManager.AddProperty<bool>(unlock.ID.ToString(), unlock.IsUnlockable || StartingUnlocks.Contains(unlock.ID));
+                PrefManager.AddProperty<bool>(unlock.ID.ToString() + "_AutoAdd", false);
             }
         }
 

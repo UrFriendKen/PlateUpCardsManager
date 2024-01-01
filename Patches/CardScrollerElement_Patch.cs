@@ -62,7 +62,7 @@ namespace KitchenCardsManager.Patches
                             if (indexToSet[i] >= MinIndex && indexToSet[i] <= MaxIndex)
                             {
                                 Unlock unlock = Cards[indexToSet[i]];
-                                SetPreference(unlock, CardEnabledState);
+                                SetPreference(unlock.ID.ToString(), CardEnabledState);
                                 Color newColor = GetColorByEnabledState(unlock);
                                 UnlockCardElement card = CardBank[indexToSet[i]];
                                 UnlockHelpers.SetColor(card, newColor);
@@ -72,6 +72,12 @@ namespace KitchenCardsManager.Patches
                     }
                     return IsCompleted;
                 }
+            }
+
+            private struct UnlockCardDisplay
+            {
+                public UnlockCardElement Card;
+                public UnlockCardState CardState;
             }
 
             private readonly string Name;
@@ -108,7 +114,7 @@ namespace KitchenCardsManager.Patches
             private float RowAngularPitchOffset;
 
             private List<Unlock> Cards;
-            private List<UnlockCardElement> CardBank = new List<UnlockCardElement>();
+            private List<UnlockCardDisplay> CardBank = new List<UnlockCardDisplay>();
             private List<int> RowsCount = new List<int>();
             private List<int> RowsStartIndex = new List<int>();
             private List<int> RowsSelectedIndex = new List<int>();
@@ -272,7 +278,13 @@ namespace KitchenCardsManager.Patches
                         {
                             DefaultColorDict.Add(card.ID, UnlockHelpers.GetColor(unlockCardElement));
                         }
-                        CardBank.Add(unlockCardElement);
+
+                        UnlockCardState unlockCardState = new UnlockCardState(unlockCardElement);
+
+                        CardBank.Add(new UnlockCardDisplay {
+                            Card = unlockCardElement,
+                            CardState = unlockCardState
+                        });
                     }
                     IsInit = true;
                 }
@@ -342,7 +354,8 @@ namespace KitchenCardsManager.Patches
                 string prevGroup = null;
                 for (int i = 0; i < CardBank.Count; i++)
                 {
-                    UnlockCardElement unlockCardElement = CardBank[i];
+                    UnlockCardElement unlockCardElement = CardBank[i].Card;
+                    UnlockCardState unlockCardState = CardBank[i].CardState;
                     string group = GetRowGroup(i);
                     if (prevGroup != null && prevGroup != group)
                     {
@@ -376,12 +389,13 @@ namespace KitchenCardsManager.Patches
                     unlockCardElement.transform.localEulerAngles = new Vector3(0.0f, 0.0f, (RowsSelectedIndex[row] - i) * AngularPitch - rowOffset * RowAngularPitchOffset);
 
                     UnlockHelpers.SetColor(unlockCardElement, GetColorByEnabledState(Cards[i]));
+                    UnlockHelpers.SetAutoAddIndicator(unlockCardState, Cards[i]);
                 }
             }
 
             internal void AddRowToggler()
             {
-                RowTogglers.Add(new RowToggler(SelectedIndex, RowsStartIndex[SelectedRowIndex], RowsStartIndex[SelectedRowIndex] + RowsCount[SelectedRowIndex] - 1, IsSelectedCardEnabled, Cards, CardBank));
+                RowTogglers.Add(new RowToggler(SelectedIndex, RowsStartIndex[SelectedRowIndex], RowsStartIndex[SelectedRowIndex] + RowsCount[SelectedRowIndex] - 1, IsSelectedCardEnabled, Cards, CardBank.Select(x => x.Card).ToList()));
             }
 
             internal bool RowToggleStep()
@@ -398,12 +412,17 @@ namespace KitchenCardsManager.Patches
                 return performed;
             }
 
-            internal Color ToggleSelectedCard()
+            internal Color ToggleEnabledSelectedCard()
             {
-                TogglePreference(SelectedUnlock);
+                ToggleEnabledPreference(SelectedUnlock);
                 Color newColor = SelectedUnlockColorByState;
-                UnlockHelpers.SetColor(CardBank[SelectedIndex], newColor);
+                UnlockHelpers.SetColor(CardBank[SelectedIndex].Card, newColor);
                 return newColor;
+            }
+
+            internal bool ToggleAutoAddSelectedCard()
+            {
+                return ToggleAutoAddPreference(SelectedUnlock);
             }
 
             internal bool AddSelectedCardToRun(out string statusMessage)
@@ -411,17 +430,24 @@ namespace KitchenCardsManager.Patches
                 return CardsManagerController.AddProgressionUnlock(SelectedUnlock.ID, out statusMessage);
             }
 
-            private static bool SetPreference(Unlock unlock, bool enabled)
+            private static bool SetPreference(string preferenceID, bool value)
             {
-                Main.PrefManager.Set<bool>(unlock.ID.ToString(), enabled);
-                return enabled;
+                Main.PrefManager.Set<bool>(preferenceID, value);
+                return value;
             }
 
-            private static bool TogglePreference(Unlock unlock)
+            private static bool ToggleEnabledPreference(Unlock unlock)
             {
-                
-                bool newValue = !Main.PrefManager.Get<bool>(unlock.ID.ToString());
-                return SetPreference(unlock, newValue);
+                string enabledPreferenceID = unlock.ID.ToString();
+                bool newValue = !Main.PrefManager.Get<bool>(enabledPreferenceID);
+                return SetPreference(enabledPreferenceID, newValue);
+            }
+
+            private static bool ToggleAutoAddPreference(Unlock unlock)
+            {
+                string enabledPreferenceID = unlock.ID.ToString() + "_AutoAdd";
+                bool newValue = !Main.PrefManager.Get<bool>(enabledPreferenceID);
+                return SetPreference(enabledPreferenceID, newValue);
             }
 
             private static Color GetColorByEnabledState(Unlock unlock)
@@ -523,6 +549,11 @@ namespace KitchenCardsManager.Patches
         private static bool PerformedReady = false;
         private static float ReadyHeldThreshold => Main.PrefManager?.Get<float>(Main.CARDS_MANAGER_ADD_REMOVE_HOLD_DURATION) ?? 3f;
         internal static bool IsReadyDown { get => ReadyHeldTime > 0f; }
+
+        private static float StopMovingHeldTime = 0f;
+        private static bool PerformedStopMoving = false;
+        private static float StopMovingHeldThreshold => Main.PrefManager?.Get<float>(Main.CARDS_MANAGER_AUTO_ADD_HOLD_DURATION) ?? 1.5f;
+        internal static bool IsStopMovingDown { get => StopMovingHeldTime > 0f; }
 
         private static bool HandleInteractionRequireRedraw = false;
 
@@ -731,9 +762,24 @@ namespace KitchenCardsManager.Patches
             }
             IsScrolling = false;
 
-            if (HandleToggleCard(state, out ToggleType toggleType))
+            if (HandleToggleAutoAdd(state, out ToggleType toggleAutoAddType))
             {
-                switch (toggleType)
+                switch (toggleAutoAddType)
+                {
+                    case ToggleType.Single:
+                        ToggleAutoAddCard();
+                        _pages[_selectedPageIndex].Redraw();
+                        break;
+                    case ToggleType.Row:
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            if (HandleToggleCard(state, out ToggleType toggleCardType))
+            {
+                switch (toggleCardType)
                 {
                     case ToggleType.Single:
                         ToggleCard(__instance.Card);
@@ -923,7 +969,7 @@ namespace KitchenCardsManager.Patches
         private static bool HandleToggleCard(InputState state, out ToggleType toggleType)
         {
             toggleType = ToggleType.None;
-            if (IsCardManagerMode && ReadyHeldTime == 0f)
+            if (IsCardManagerMode && !IsReadyDown && !IsStopMovingDown)
             {
                 if (!PerformedGrab && (state.GrabAction == ButtonState.Held || state.GrabAction == ButtonState.Pressed))
                 {
@@ -951,6 +997,41 @@ namespace KitchenCardsManager.Patches
             {
                 PerformedGrab = false;
                 GrabHeldTime = 0f;
+            }
+            return false;
+        }
+
+        private static bool HandleToggleAutoAdd(InputState state, out ToggleType toggleType)
+        {
+            toggleType = ToggleType.None;
+            if (IsCardManagerMode && !IsGrabDown && !IsReadyDown)
+            {
+                if (!PerformedStopMoving && (state.StopMoving == ButtonState.Held || state.StopMoving == ButtonState.Pressed))
+                {
+                    StopMovingHeldTime += Time.deltaTime;
+                    if (StopMovingHeldTime > StopMovingHeldThreshold)
+                    {
+                        toggleType = ToggleType.Row;
+                        PerformedStopMoving = true;
+                    }
+                    return true;
+                }
+                else if (state.StopMoving == ButtonState.Released)
+                {
+                    if (!PerformedStopMoving && StopMovingHeldTime > 0f)
+                    {
+                        toggleType = ToggleType.Single;
+                    }
+                    PerformedStopMoving = false;
+                    StopMovingHeldTime = 0f;
+                    _pages[_selectedPageIndex].Redraw();
+                    return true;
+                }
+            }
+            else
+            {
+                PerformedStopMoving = false;
+                StopMovingHeldTime = 0f;
             }
             return false;
         }
@@ -997,11 +1078,16 @@ namespace KitchenCardsManager.Patches
 
         private static void ToggleCard(UnlockCardElement mainCardDisplay)
         {
-            Color newColor = _pages[_selectedPageIndex].ToggleSelectedCard();
+            Color newColor = _pages[_selectedPageIndex].ToggleEnabledSelectedCard();
             if (mainCardDisplay != null)
             {
                 UnlockHelpers.SetColor(mainCardDisplay, newColor);
             }
+        }
+
+        private static void ToggleAutoAddCard()
+        {
+            bool isAutoAdd = _pages[_selectedPageIndex].ToggleAutoAddSelectedCard();
         }
 
         private static void AddSelectedCardToRun(out string statusMessage)

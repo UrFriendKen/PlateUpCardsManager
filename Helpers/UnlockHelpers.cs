@@ -82,6 +82,77 @@ namespace KitchenCardsManager.Helpers
             }
         }
 
+        internal static bool GetRequirementsAutoAddState(Unlock unlock)
+        {
+            return Direct_GetRequirementsAutoAddState(unlock);
+        }
+
+        private static bool Direct_GetRequirementsAutoAddState(Unlock unlock, int depth = 0)
+        {
+            try
+            {
+                if (unlock == null || depth >= 10)
+                    return false;
+                foreach (Unlock requirement in unlock.Requires)
+                {
+                    if (!GetAutoAddState(requirement))
+                        return false;
+                    if (GetBlockedBysAutoAddState(requirement))
+                        return false;
+                    foreach (Unlock innerRequirement in requirement.Requires)
+                    {
+                        if (!Direct_GetRequirementsAutoAddState(innerRequirement, depth + 1))
+                            return false;
+                    }
+                }
+                return true;
+            }
+            catch (NullReferenceException)
+            {
+                return false;
+            }
+        }
+
+        internal static bool GetBlockedBysAutoAddState(Unlock unlock)
+        {
+            try
+            {
+                if (unlock == null)
+                    return false;
+                foreach (Unlock blocker in unlock.BlockedBy)
+                {
+                    if (GetAutoAddState(blocker))
+                        return true;
+                }
+                return false;
+            }
+            catch (NullReferenceException)
+            {
+                return false;
+            }
+        }
+
+        internal static bool GetAutoAddState(Unlock unlock)
+        {
+            try
+            {
+                return Main.PrefManager.Get<bool>(unlock.ID.ToString() + "_AutoAdd");
+            }
+            catch (NullReferenceException)
+            {
+                return false;
+            }
+        }
+
+        internal static bool ShouldBeAutoAdded(Unlock unlock)
+        {
+            return GetAutoAddState(unlock) &&
+                (!Main.PrefManager.Get<bool>(Main.CARDS_MANAGER_ADD_REMOVE_VALIDITY_CHECKING) ||
+                (GetDefaultEnabledState(unlock) &&
+                GetRequirementsAutoAddState(unlock) &&
+                !GetBlockedBysAutoAddState(unlock)));
+        }
+
         internal static void SetColor(UnlockCardElement card, Color color)
         {
             card.Card.material.SetColor(Shader.PropertyToID("_Title"), color);
@@ -100,6 +171,11 @@ namespace KitchenCardsManager.Helpers
         internal static bool GetDefaultEnabledState(Unlock unlock)
         {
             return unlock.IsUnlockable || Main.StartingUnlocks.Contains(unlock.ID);
+        }
+
+        internal static void SetAutoAddIndicator(UnlockCardState cardState, Unlock unlock)
+        {
+            cardState.UpdateAutoAdd(unlock);
         }
     }
 }
