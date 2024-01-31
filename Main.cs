@@ -22,7 +22,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.5.0";
+        private const string MOD_VERSION = "1.5.1";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -85,10 +85,16 @@ namespace KitchenCardsManager
                 ModularUnlockPack themesModularUnlockPack = null;
                 foreach (CompositeUnlockPack compositeUnlockPack in args.gamedata.Get<CompositeUnlockPack>())
                 {
+                    if (compositeUnlockPack?.Packs == null)
+                        continue;
+
                     int franchisePackIndex = -1;
                     int themesPackIndex = -1;
                     for (int i = 0; i < compositeUnlockPack.Packs.Count; i++)
                     {
+                        if (compositeUnlockPack.Packs[i] == null)
+                            continue;
+
                         switch (compositeUnlockPack.Packs[i].ID)
                         {
                             case 1355831133: // Franchise Card Pack
