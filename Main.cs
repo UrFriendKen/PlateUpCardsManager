@@ -22,7 +22,7 @@ namespace KitchenCardsManager
         // mod version must follow semver e.g. "1.2.3"
         internal const string MOD_GUID = "IcedMilo.PlateUp.CardsManager";
         private const string MOD_NAME = "Cards Manager";
-        private const string MOD_VERSION = "1.5.1";
+        private const string MOD_VERSION = "1.5.2";
         private const string MOD_AUTHOR = "IcedMilo";
         private const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
@@ -48,8 +48,22 @@ namespace KitchenCardsManager
 
         internal const string DISH_CARDS_GROUPING_ID = "dishCardsGrouping";
 
-        internal static bool BlacklistModeEnabled { get; private set; }
-        internal static bool WhitelistModeEnabled { get; private set; }
+        internal static bool BlacklistModeEnabled
+        {
+            get
+            {
+                int prefValue = PrefManager?.Get<int>(CARDS_MANAGER_MODE_PREFERENCE_ID) ?? 0;
+                return prefValue == 1 || prefValue == 2;
+            }
+        }
+        internal static bool WhitelistModeEnabled
+        {
+            get
+            {
+                int prefValue = PrefManager?.Get<int>(CARDS_MANAGER_MODE_PREFERENCE_ID) ?? 0;
+                return prefValue == 2;
+            }
+        }
 
         internal static PreferenceSystemManager PrefManager;
 
@@ -67,7 +81,6 @@ namespace KitchenCardsManager
                 }
             }
             RegisterPreferences();
-            UpdateMode(PrefManager.Get<int>(CARDS_MANAGER_MODE_PREFERENCE_ID));
         }
 
         protected override void OnPostActivate(Mod mod)
@@ -134,8 +147,7 @@ namespace KitchenCardsManager
                 CARDS_MANAGER_MODE_PREFERENCE_ID,
                 1,
                 new int[] { 0, 1, 2 },
-                new string[] { "Vanilla", "Blacklist", "Whitelist" },
-                UpdateMode)
+                new string[] { "Vanilla", "Blacklist", "Whitelist" })
             .AddLabel("Automatically Reset Mode To Vanilla")
             .AddOption<int>(
                 CARDS_MANAGER_RESET_MODE_PREFERENCE_ID,
@@ -162,7 +174,7 @@ namespace KitchenCardsManager
                 new string[] { "Prevent", "Allow" })
             .AddSpacer()
             .AddLabel("Edit Cards")
-            .AddSelfRegisteredSubmenu<CardsManagerScrollerMenu<MainMenuAction>, CardsManagerScrollerMenu<PauseMenuAction>>("Open Cards Menu")
+            .AddSelfRegisteredSubmenu<CardsManagerScrollerMenu<MenuAction>>("Open Cards Menu")
             .AddButtonWithConfirm("Reset Card Settings", "Confirm reset all card settings to default?", delegate (GenericChoiceDecision decision)
             {
                 foreach (Unlock unlock in UnlockHelpers.GetAllUnlocksEnumerable())
@@ -214,16 +226,13 @@ namespace KitchenCardsManager
 
             AddProperties();
 
-            Events.PreferenceMenu_MainMenu_CreateSubmenusEvent += (s, args) =>
+            Events.MainMenuView_SetupMenusEvent += (s, args) =>
             {
-                CardsManagerScrollerMenu<MainMenuAction> cardsMenu = new CardsManagerScrollerMenu<MainMenuAction>(args.Container, args.Module_list);
-                args.Menus.Add(typeof(CardsManagerScrollerMenu<MainMenuAction>), cardsMenu);
+                args.addMenu.Invoke(args.instance, new object[] { typeof(CardsManagerScrollerMenu<MenuAction>), new CardsManagerScrollerMenu<MenuAction>(args.instance.ButtonContainer, args.module_list) });
             };
-
-            Events.PreferenceMenu_PauseMenu_CreateSubmenusEvent += (s, args) =>
+            Events.PlayerPauseView_SetupMenusEvent += (s, args) =>
             {
-                CardsManagerScrollerMenu<PauseMenuAction> cardsMenu = new CardsManagerScrollerMenu<PauseMenuAction>(args.Container, args.Module_list);
-                args.Menus.Add(typeof(CardsManagerScrollerMenu<PauseMenuAction>), cardsMenu);
+                args.addMenu.Invoke(args.instance, new object[] { typeof(CardsManagerScrollerMenu<MenuAction>), new CardsManagerScrollerMenu<MenuAction>(args.instance.ButtonContainer, args.module_list) });
             };
 
             PrefManager.RegisterMenu(PreferenceSystemManager.MenuType.PauseMenu);
@@ -242,32 +251,6 @@ namespace KitchenCardsManager
         {
             LogInfo("Resetting mode to Vanilla");
             PrefManager.Set<int>(CARDS_MANAGER_MODE_PREFERENCE_ID, 0);
-            UpdateMode(PrefManager.Get<int>(CARDS_MANAGER_MODE_PREFERENCE_ID));
-        }
-
-        private static void UpdateMode(int modeValue)
-        {
-            switch (modeValue)
-            {
-                case 0:
-                    BlacklistModeEnabled = false;
-                    WhitelistModeEnabled = false;
-                    break;
-                case 1:
-                    BlacklistModeEnabled = true;
-                    WhitelistModeEnabled = false;
-                    break;
-                case 2:
-                    BlacklistModeEnabled = true;
-                    WhitelistModeEnabled = true;
-                    break;
-                default:
-                    BlacklistModeEnabled = false;
-                    WhitelistModeEnabled = false;
-                    break;
-            }
-            string mode = WhitelistModeEnabled ? "Whitelist" : (BlacklistModeEnabled ? "Blacklist" : "Vanilla");
-            LogInfo($"Mode Updated: {mode}");
         }
 
         #region Logging

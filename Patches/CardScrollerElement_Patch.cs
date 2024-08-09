@@ -91,7 +91,7 @@ namespace KitchenCardsManager.Patches
             private readonly Vector3 SCROLLER_CONTAINER_ROTATION_DEFAULT = new Vector3(0f, 0f, 0f);
 
             private Vector3 CentreCardRestingLocalPosition;
-            private readonly Vector3 CENTRE_CARD_RESTING_LOCAL_POSITION_DEFAULT = new Vector3(-0.25f, 1.3f, -0.9f);
+            private readonly Vector3 CENTRE_CARD_RESTING_LOCAL_POSITION_DEFAULT = new Vector3(-0.25f, 0.6f, -0.9f);
 
             private Vector3 RowOffsetVector;
             private readonly Vector3 ROW_OFFSET_VECTOR_DEFAULT = new Vector3(0f, 1f, 0.68f);
@@ -188,7 +188,7 @@ namespace KitchenCardsManager.Patches
                 float curveRadius = 30f,
                 float angularPitch = 1f,
                 float rowAngularPitchOffset = -0.33f,
-                float stackingZOffset = -0.15f,
+                float stackingZOffset = -0.12f,
                 string name = null,
                 Vector3? containerLocalPosition = null,
                 Vector3? containerRotation = null,
@@ -536,7 +536,8 @@ namespace KitchenCardsManager.Patches
         private static Vector3 _parentOriginalLocalPosition;
 
         private static readonly Vector3 _viewNewLocalPosition = new Vector3(-0.22f, -2.3f, -4f);
-        private static readonly Vector3 _scrollersContainerRotation = new Vector3(5f, 0.0f, 0.0f);
+        private static readonly Vector3 _scrollersContainerRotation = new Vector3(0.0f, 0.0f, 0.0f);
+        private static readonly float _scrollersContainerZ = -3.5f;
 
         private static readonly MethodInfo mSetIndex = ReflectionUtils.GetMethod<CardScrollerElement>("SetIndex", BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -659,7 +660,9 @@ namespace KitchenCardsManager.Patches
                 ScrollersContainer = new GameObject("Card Manager Scrollers");
                 ScrollersContainer.transform.parent = instance.Card.transform.parent;
                 ScrollersContainer.transform.localScale = instance.Container.transform.localScale;
-                ScrollersContainer.transform.localPosition = instance.Container.transform.localPosition;
+                Vector3 containerPosition = instance.Container.transform.localPosition;
+                containerPosition.z = _scrollersContainerZ;
+                ScrollersContainer.transform.localPosition = containerPosition;
                 ScrollersContainer.transform.localEulerAngles = _scrollersContainerRotation;
                 _pages.Clear();
 

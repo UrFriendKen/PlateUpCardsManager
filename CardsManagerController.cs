@@ -926,9 +926,9 @@ namespace KitchenCardsManager
                 IEnumerable<GlobalEffect> globalEffects = unlockCard.Effects.Where(x => x.GetType() == typeof(GlobalEffect)).Cast<GlobalEffect>();
                 foreach (GlobalEffect globalEffect in globalEffects)
                 {
-                    if (!SupportedRemoveEffectTypes.Contains(globalEffect.EffectType.GetType()) || !SupportedRemoveEffectConditions.Contains(globalEffect.EffectCondition.GetType()))
+                    if (globalEffect.EffectType == null || !SupportedRemoveEffectTypes.Contains(globalEffect.EffectType.GetType()) || !SupportedRemoveEffectConditions.Contains(globalEffect.EffectCondition?.GetType() ?? typeof(CEffectAlways)))
                     {
-                        statusMessage += $"\n- {globalEffect.EffectType.GetType().Name} ({globalEffect.EffectCondition.GetType().Name})";
+                        statusMessage += $"\n- {globalEffect.EffectType?.GetType().Name ?? "null"} ({globalEffect.EffectCondition.GetType().Name})";
                         hasUnsupportedGlobalEffect = true;
                     }
                 }
